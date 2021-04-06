@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<div class="media border-bottom archivo" style="border-radius: 10px;  padding: 2px 15px;" id="archivo_[Id]" value="[Id]">
+    <input type="hidden" id="idArchivo" value=[Id]>
+    <div class="media-left" style="vertical-align:middle">
+        
+        <i onclick="SwapArchivos([Id], $(this));" class="mdi mdi-arrow-up-bold" style="font-size: 190%; margin-right: 10px; border-radius: 4px;  cursor: pointer; background-color: DodgerBlue; border: none; color: white;">
+
+        </i>
+         
+    </div>
+    <div class="media-left" style="vertical-align:middle">
+        <img src="/[srcIcono]" class="media-object" style="width: 32px;margin-right: 10px;">
+    </div>
+    <div class="media-body datos" id="ArchivosDatos_[Id]" style="vertical-align:middle">
+        <h4 class="media-heading nombre">[NombreAMostrar]</h4>
+        <p class="obs">[Observaciones]</p>
+    </div>
+    <div class="media-body archivo-botones align-right" id="ArchivosBotones_[Id]" style="vertical-align:middle;margin-right: 10px;">
+        <div style=" text-align: center;" class="row pull-right m10">
+
+            <a class="btn btn-primary  boton-archivo " style="width: 103.58px; " id="BotonEditar_[Id]" data-val="" onclick="PrepararUpdate($(this), this.dataset.val);">Editar</a>
+
+            <a class="btn btn-danger  boton-archivo " style="width: 103.58px; " id="BotonEliminar_[Id]" data-val="" onclick="EliminarArchivo(this.dataset.val);">Eliminar</a>
+
+        </div>
+    </div>
+</div>
+<hr />

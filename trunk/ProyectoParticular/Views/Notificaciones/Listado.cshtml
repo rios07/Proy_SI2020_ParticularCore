@@ -1,0 +1,76 @@
+﻿@model ControladoresCore.ViewModels.NotificacionesVM
+@using System.Web.Mvc.Html
+@using ControladoresCore.Extensiones;
+
+@{
+    ViewBag.Title = "Notificaciones - Listado";
+}
+@using (Html.BeginCard("Filtros"))
+
+{
+    <div class="form-horizontal group-border">
+       
+        <div class="row pt-lg-2">
+            <div class="col-lg-1 control-label" style="vertical-align: middle">
+                Leída
+            </div>
+            <div class="col-lg-1">
+                @HtmlHelperExtension.FiltroCheckbox("Leída", "Leida")
+            </div>
+        </div>
+        <div class="form-horizontal group-border">
+            <div class="form-group row" style="margin-top:20px">
+                <div class="form-group m5">
+                    <div class="col-lg-8" style="margin-right:250px">
+                        <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+
+                        <div class="btn-group dropup mo-mb-2">
+                            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                            <div class="dropdown-menu">
+                                @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                                @*<a class="dropdown-item" href="#">Another action</a>
+                                    <a class="dropdown-item" href="#">Something else here</a>*@
+                                @*<div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="#">Separated link</a>*@
+                            </div>
+                        </div>
+
+                        <a class="btn btn-danger removeOnIframe ml-1" href="/intranet/Home/Index">Regresar</a>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+                <th field="IconoCSS" mask="<i class='{VAL}'> </i>">
+                    @Html.DisplayNameFor(model => model.IconoCSS)
+                </th>
+                <th field="FechaParaListado">
+                    @Html.DisplayNameFor(model => model.Fecha)
+                </th>
+
+                <th field="Antiguedad">
+                    @Html.DisplayNameFor(model => model.Antiguedad)
+                </th>
+
+                <th field="Cuerpo">
+                    @Html.DisplayNameFor(model => model.Cuerpo)
+                </th>
+
+
+                <th field="Leida" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    @Html.DisplayNameFor(model => model.Leida)
+                </th>
+
+                @HtmlHelperExtension.Boton("Notificaciones", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.Seccion)
+            </tr>
+        </thead>
+    </table>
+}

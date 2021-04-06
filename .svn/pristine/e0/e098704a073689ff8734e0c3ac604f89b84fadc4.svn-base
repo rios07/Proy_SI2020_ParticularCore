@@ -1,0 +1,104 @@
+﻿@model ControladoresCore.ViewModels.ReservasDeRecursosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Reservas de recursos - Disponibilidad";
+}
+
+@using (Html.BeginForm())
+{
+    using (Html.BeginCard("Checkear disponibilidad"))
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.RecursoId, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.DropDownListFor(m => m.RecursoId, new SelectList(Model.RecursosDDL, "Id", "Nombre", null), "Seleccione una opcion...", new { @class = "form-control " })
+                    @Html.ValidationMessageFor(model => model.RecursoId, "", new { @class = "text-danger" })
+                </div>
+            </div>
+            <div class="form-group ">
+                @Html.LabelFor(model => model.FechaDeInicio, htmlAttributes: new { @class = "col-form-label col-md-3" })
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                        @Html.EditorFor(model => model.FechaDeInicio, new { htmlAttributes = new { @class = "form-control datetimepicker", @Value = FuncionesCore.FFechas.FechaAhoraHTML5() } })
+                        @Html.ValidationMessageFor(model => model.FechaDeInicio, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+            <div class="form-group ">
+                @Html.LabelFor(model => model.FechaLimite, htmlAttributes: new { @class = "col-form-label col-md-3" })
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                        @Html.EditorFor(model => model.FechaLimite, new { htmlAttributes = new { @class = "form-control datetimepicker", @Value = FuncionesCore.FFechas.FechaAhoraHTML5() } })
+                        @Html.ValidationMessageFor(model => model.FechaLimite, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    }
+    <div class="card" id="dyn_2">
+        <h4 style="padding:1px; background-color:var(--color-primary)" class="card-header mt-0"></h4>
+        <div class="card-body fade-in p-2">
+            <div class="col-lg-12 pull-left botonera">
+                <button class="btn btn-primary" onclick="return CheckearDisponibilidad(); ">Checkear disponibilidad</button>
+            </div>
+        </div>
+    </div>
+}
+
+
+<script>
+    function CheckearDisponibilidad() {
+        if (CheckFecha()) {
+            if ($('#RecursoId').val() != ""){
+                var datos = {
+                    pRecursoId:$('#RecursoId').val(),
+                    pFechaDeInicio: $('#FechaDeInicio').val(),
+                    pFechaLimite: $('#FechaLimite').val()
+                };
+                $.ajax({
+                    url: '@Url.Action("CheckearDisponibilidad")',
+                    type: 'post',
+                    dataType: 'json',
+                    data: JSON.stringify(datos),
+                    contentType: 'application/json',
+                    success: function (retorno) {
+
+                        if (retorno == "") {
+                            swal({
+                                title: "El recurso se encuentra disponible",
+                                type: "success",
+                                showCancelButton: false
+                            });
+                        }
+                        else {
+                            swal({
+                                title: "El recurso no se encuentra disponible",
+                                type: "error",
+                                showCancelButton: false
+                            });
+                        }
+
+
+                    }
+                });
+                
+            }
+        }
+        return false;
+    }
+    
+    function CheckFecha() {
+        return ValFechaDesdeHasta('FechaDeInicio', 'FechaLimite', "La fecha de inicio no puede luego de la fecha límite");
+    }
+
+</script>

@@ -1,0 +1,37 @@
+﻿@model ControladoresCore.ViewModels.NotificacionesVM
+@using ControladoresCore.Extensiones;
+
+@{
+    ViewBag.Title = "Notificaciones - Listado";
+}
+
+@using (Html.BeginCard("Listado"))
+ {
+     <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+         <thead>
+             <tr>
+                 <th field="Icono">
+                     @Html.DisplayNameFor(model => model.Icono)
+                 </th>
+                 <th field="Numero">
+                     @Html.DisplayNameFor(model => model.Numero)
+                 </th>
+                 <th field="Fecha">
+                     @Html.DisplayNameFor(model => model.Fecha)
+                 </th>
+                 <th field="Cuerpo">
+                     @Html.DisplayNameFor(model => model.Cuerpo)
+                 </th>
+
+                 <th field="Antiguedad">
+                     @Html.DisplayNameFor(model => model.Antiguedad)
+                 </th>
+                 <th field="Leida" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                     @Html.DisplayNameFor(model => model.Leida)
+                 </th>
+
+                 @HtmlHelperExtension.Boton("Notificaciones", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+             </tr>
+         </thead>
+     </table>
+ }

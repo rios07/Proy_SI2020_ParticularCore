@@ -1,0 +1,187 @@
+-- =====================================================
+-- Author:		Facundo Campaña
+-- CREATE date: 31/08/2018
+-- Description:	INSERT DUMMY DATA - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- INSERT VALUES DEL SISTEMA: - Inicio
+-- -------------------------
+
+
+				-- Variable que utilizamos en los Insert - INICIO
+					DECLARE @UsuarioQueEjecutaId INT = '2' -- (ContextoId=2) OJO, q si se utiliza el UsuarioId=1 -- > VA EN ContextoId=1 --> no logueable
+						,@FechaDeEjecucion DATETIME = GetDate()
+						,@sResSQL VARCHAR(1000)	
+						,@id INT
+						,@UsuarioId INT
+						,@ActorId INT = (SELECT id FROM Actores WHERE Nombre = 'Sistemas' AND ContextoId = 2)
+				-- Variable que utilizamos en los Insert - FIN
+				
+
+-- dEJAMOS MUCHOS COMENTADOS PARA TENERLOS EN CUENTA AL ENLAZARLOS EN LAS FK
+-- INSERT VALUES: Contextos - INICIO
+	--PRINT 'Insertando Contextos'
+	--INSERT INTO Contextos (Numero, Nombre, Codigo, CarpetaDeContenidos) VALUES ('0', 'Sistema', 'Sistema', 'CarpetaDeSist')
+	--INSERT INTO Contextos (Numero, Nombre, Codigo, CarpetaDeContenidos) VALUES ('1', 'Pruebas', 'Pruebas', 'CarpetaDePruebas')
+	--SELECT * FROM Contextos
+-- INSERT VALUES: Contextos - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeActores - INICIO // Lo necesito antes que a los Actores
+	--PRINT 'Insertando TiposDeActores'
+	---- Sistemas --> id=0
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Sistemas', 'Para el departamento de Sistemas')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Internos', 'Para los usuarios principales del proyecto')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Clientes', 'Para los clientes del proyecto')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Externos', 'Para colaboradores externos al proyecto')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Contratistas', 'Para los contratistas del proyecto')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Comitentes', 'Para los comitentes del proyecto')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Proveedoes', 'Para Proveedores')
+	--INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Otros', 'Para tipos de actores no contemplados')
+	--SELECT * FROM TiposDeActores
+	---- INSERT VALUES: TiposDeActores - FIN
+	---- INSERT VALUES: Actores - INICIO
+	--PRINT 'Insertando Actores'
+	--INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES ('0', '0', 'Sistemas', 'Sistemas') -- id=1
+	--INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES ('1', '1', 'Actor1', 'Actor 1') -- id=2
+	--SELECT * FROM Actores
+-- INSERT VALUES: Actores - FIN
+
+
+
+
+-- ESTO LO CARGAMOS DE INICIO, DEJARLO ACÁ AUNQUE NO ESTÉ POR ABC
+	-- ARRANCO CON LOS ROLES p/PODER ARGREGAR USUARIOS
+	-- INSERT VALUES: RolesDeUsuarios - INICIO
+	-- La prioridad la utilizamos p la asignación de permisos
+	--PRINT 'Insertando RolesDeUsuarios'
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('1', 'Master Admin', 'Solo para los Desarrolladores del Sistema.', '100', 'False')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('2', 'Administrador', 'No accede a páginas exclusivas del MasterAdmin; Para el resto: Administración completa de las funcionalidades ofrecidas.', '200', 'False')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('3', 'Supervidor', 'Operador Avanzado, que además permite la planificación y consulta de todo el sitio.', '300', 'True')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('4', 'Operador Avanzado', 'Operador con algunas atribuciones de administrador.', '400', 'True')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('5', 'Operador', 'Operador de las funciones cotidianas de trabajo.', '500', 'True')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('6', 'Consultor', 'Permite la consulta general de las paginas de acceso del Operador, pero no la operación de las funciones cotidianas de trabajo.', '600', 'True')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('7', 'Visitante', 'Solo Podrá Consultar algunas páginas específicas, pero ninguna operación.', '700', 'True')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('8', 'Solo Login', 'Para C/ Usuario Creado, Para q funque el INNER JOIN.', '800', 'False')
+	---- Pondremos prioridad negativa a los roles especificos de tareas, como la de pedir soportes.
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('9', 'Pedir Soportes', 'Realizar, ver y gestionar pedidos de soporte.', '-100', 'False')
+	--INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('10', 'Administrar Soportes', 'Administrar, Realizar, ver y gestionar pedidos de soporte.', '-200', 'False')
+	--SELECT * FROM RolesDeUsuarios
+-- INSERT VALUES: RolesDeUsuarios - FIN
+
+
+
+
+-- INSERT VALUES: Usuarios - INICIO
+	PRINT 'Insertando Usuarios'
+	
+	EXEC	[dbo].[usp_Usuarios__Insert]
+		@UsuarioQueEjecutaId = @UsuarioQueEjecutaId,
+		@FechaDeEjecucion = @FechaDeEjecucion,
+		@UserName = 'jgonzalez',
+		@Pass = 'c08991605b638831f64be24b7b04e6ce01db0e37',
+		@Nombre = 'Jorge',
+		@Apellido = 'Gonzalez',
+		@ActorId = @ActorId,
+		@RolDeUsuarioId = '4',
+		@Email = '',
+		@Email2 = '',
+		@Telefono = '',
+		@Telefono2 = '',
+		@Direccion = '',
+		@Observaciones = '',
+		@sResSQL = @sResSQL OUTPUT,
+		@id = @id OUTPUT
+	SELECT	@sResSQL as N'@sResSQL',@id as N'@id'
+
+	EXEC	[dbo].[usp_Usuarios__Insert]
+		@UsuarioQueEjecutaId = @UsuarioQueEjecutaId,
+		@FechaDeEjecucion = @FechaDeEjecucion,
+		@UserName = 'pgomez',
+		@Pass = 'c08991605b638831f64be24b7b04e6ce01db0e37',
+		@Nombre = 'Pablo',
+		@Apellido = 'Gomez',
+		@ActorId = @ActorId,
+		@RolDeUsuarioId = '5',
+		@Email = '',
+		@Email2 = '',
+		@Telefono = '',
+		@Telefono2 = '',
+		@Direccion = '',
+		@Observaciones = '',
+		@sResSQL = @sResSQL OUTPUT,
+		@id = @id OUTPUT
+	SELECT	@sResSQL as N'@sResSQL',@id as N'@id'
+		
+	EXEC	[dbo].[usp_Usuarios__Insert]
+		@UsuarioQueEjecutaId = @UsuarioQueEjecutaId,
+		@FechaDeEjecucion = @FechaDeEjecucion,
+		@UserName = 'agimenez',
+		@Pass = 'c08991605b638831f64be24b7b04e6ce01db0e37',
+		@Nombre = 'Alejandra',
+		@Apellido = 'Gimenez',
+		@ActorId = @ActorId,
+		@RolDeUsuarioId = '6',
+		@Email = '',
+		@Email2 = '',
+		@Telefono = '',
+		@Telefono2 = '',
+		@Direccion = '',
+		@Observaciones = '',
+		@sResSQL = @sResSQL OUTPUT,
+		@id = @id OUTPUT
+	SELECT	@sResSQL as N'@sResSQL',@id as N'@id'
+			
+	EXEC	[dbo].[usp_Usuarios__Insert]
+		@UsuarioQueEjecutaId = @UsuarioQueEjecutaId,
+		@FechaDeEjecucion = @FechaDeEjecucion,
+		@UserName = 'mganga',
+		@Pass = 'c08991605b638831f64be24b7b04e6ce01db0e37',
+		@Nombre = 'Mirta',
+		@Apellido = 'Ganga',
+		@ActorId = @ActorId,
+		@RolDeUsuarioId = '7',
+		@Email = '',
+		@Email2 = '',
+		@Telefono = '',
+		@Telefono2 = '',
+		@Direccion = '',
+		@Observaciones = '',
+		@sResSQL = @sResSQL OUTPUT,
+		@id = @id OUTPUT
+	SELECT	@sResSQL as N'@sResSQL',@id as N'@id'
+			
+	EXEC	[dbo].[usp_Usuarios__Insert]
+		@UsuarioQueEjecutaId = @UsuarioQueEjecutaId,
+		@FechaDeEjecucion = @FechaDeEjecucion,
+		@UserName = 'jperez',
+		@Pass = 'c08991605b638831f64be24b7b04e6ce01db0e37',
+		@Nombre = 'Juan',
+		@Apellido = 'Pérez',
+		@ActorId = @ActorId,
+		@RolDeUsuarioId = '8',
+		@Email = '',
+		@Email2 = '',
+		@Telefono = '',
+		@Telefono2 = '',
+		@Direccion = '',
+		@Observaciones = '',
+		@sResSQL = @sResSQL OUTPUT,
+		@id = @id OUTPUT
+SELECT	@sResSQL as N'@sResSQL',@id as N'@id'
+			
+SELECT * FROM Usuarios
+-- INSERT VALUES: Usuarios - FIN
+
+	
+	
+
+-- ---------------------------
+-- INSERT VALUES DEL SISTEMA: - Fin de la creacion
+-- =====================================================

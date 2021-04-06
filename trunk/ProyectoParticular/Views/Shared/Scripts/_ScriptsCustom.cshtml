@@ -1,0 +1,237 @@
+﻿@using ControladoresCore.Base
+@using ControladoresCore
+@using ModelosP
+<script>
+    function Permiso() {
+        swal('Usted no tiene permisos para realizar esta acción', '', 'warning');
+    }
+
+    var cantidadNotif = 0;
+
+    function CargarNotif() {
+
+        $.ajax({
+            url: '@Url.Action("CargarNotificaciones")',
+            type: 'post',
+            dataType: 'json',
+            //data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function(retorno) {
+
+                retorno.forEach(AgregarNotificacion);
+                $('.noti-icon-badge').html(cantidadNotif);
+            }
+        });
+
+
+    }
+
+
+    function AgregarNotificacion(retorno) {
+        var template = $('#NotifTemplate')[0];
+        var clone = document.importNode(template.content, true);
+
+        var lblIcono = clone.querySelector(".iconoNotif");
+        lblIcono.textContent = retorno.IconoCss;
+
+        var lblTitulo = clone.querySelector(".tituloNotif");
+        lblTitulo.textContent = retorno.Tabla;
+
+        var lblCuerpo = clone.querySelector(".cuerpoNotif");
+        lblCuerpo.textContent = retorno.Cuerpo;
+
+        var lblLink = clone.querySelector(".notify-item");
+        lblLink.href = '/intranet/' + retorno.Tabla + '/Registro/' + retorno.RegistroId;
+        $(lblLink).attr('onClick', 'return NotificacionVista(' + retorno.Id + ');');
+
+        if (!retorno.Leida) {
+            var lblIcon = clone.querySelector(".notify-icon");
+            lblIcon.className += ' pulse';
+            cantidadNotif++;
+
+        } else {
+            if (cantidadNotif != 0) {
+
+                cantidadNotif--;
+            }
+        }
+        $('#notificaciones').append(clone);
+    }
+
+    function NotificacionVista(id) {
+
+        $.ajax({
+            url: '@Url.Action("NotificacionVista")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify({ pParam: id }),
+            contentType: 'application/json',
+            success: function(data) {
+                return true;
+            },
+        });
+    }
+
+    $(function() {
+
+        //IMPORANTE
+        //Esto es para que cuando el validate corra, use esta funcion en vez de otra para valdiar
+        $.validator.addMethod('date',
+            function(value, element) {
+                if (this.optional(element)) {
+                    return true;
+                }
+                var valid = true;
+                try {
+                    var splitted = value.split('/');
+                    var dayInt = parseInt(splitted[0]);
+                    var monthInt = parseInt(splitted[1]);
+                    var yearInt = parseInt(splitted[2]);
+
+                    if (dayInt > 31 || dayInt < 1) {
+                        valid = false;
+                    }
+                    if (monthInt > 12 || monthInt < 1) {
+                        valid = false;
+                    }
+                    if (yearInt > 3000 || yearInt < 1900) {
+                        valid = false;
+                    }
+                } catch (err) {
+                    valid = false;
+                }
+                return valid;
+            });
+        var DatePickerOptionsExist = true;
+        try {
+
+            if (DatePickerOptions)
+                DatePickerOptionsExist = true;
+        } catch (e) {
+            DatePickerOptionsExist = false;
+        }
+
+        if (DatePickerOptionsExist) {
+            if (DatePickerOptions == "mes/anio") {
+                $(".datepicker").datetimepicker({
+                    timepicker:false,
+                    format:'m/Y',
+                    formatDate:'m/Y',
+                });
+                var date = new Date();
+                var fecha = date.getFullYear() + '-' + (date.getMonth() + 1);
+                $('.datepicker').val(fecha);
+            }
+        }
+        else
+        {
+            $(".datepicker").datetimepicker({
+                format:'d/m/Y',
+                formatDate:'d/m/Y',
+                timepicker:false
+
+            });
+            if ($('.datepicker').val() == '01/01/0001 00:00:00' || $('.datepicker').val() == '01/01/0001') {
+                var date = new Date();
+                var fecha = date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear();
+                $('.datepicker').val(fecha);
+            }
+
+            CargarNotif();
+
+            $('.datetimepicker').datetimepicker({
+                locale: 'es',
+                format:'d/m/Y H:i',
+                formatDate: 'd/m/Y',
+                formatTime: 'H:i',
+                step: 15
+            });
+            jQuery.datetimepicker.setLocale('es');
+            $('.timepicker').datetimepicker({
+                datepicker:false,
+                format:'H:i',
+                step:5
+            });
+
+            $('.datepicker').attr('autocomplete', 'off');
+            $('.datetimepicker').attr('autocomplete', 'off');
+            $('.timepicker').attr('autocomplete', 'off');
+            $('.select2').select2({
+                width: '100%',
+                placeholder: "Seleccione..."
+            });
+            // Adapto a valores de las anottations de mvc
+            $('input[data-val-length-max]').attr('maxlength',
+                function() {
+                    return $(this).attr("data-val-length-max");
+                });
+
+        }
+        $('input[data-val-length-max]').maxlength();
+
+        
+
+    });
+    
+    function RecargarDDL(pSelector, pDataArray) {
+        $('#' + pSelector).children('option').remove();
+
+        for (var i = 0; i < pDataArray.length; i++) {
+            $('#' + pSelector).append('<option value="' + pDataArray[i].Id + '">' + pDataArray[i].Nombre + '</option>');
+        }
+    };
+
+    function NotifNoIntrusive(texto, titulo = '', tiempo = '', icon = '', type = 'success') {
+        $.extend($.gritter.options,
+            {
+                position: 'bottom-left',
+            });
+        $.gritter.add({
+            // (string | mandatory) the heading of the notification
+            title: titulo,
+            // (string | mandatory) the text inside the notification
+            text: texto,
+            // (int | optional) the time you want it to be alive for before fading out
+            time: tiempo,
+            // (string) specify font-face icon  class for close message
+            close_icon: 'l-arrows-remove s16',
+            // (string) specify font-face icon class for big icon in left. if are specify image this will not show up.
+            icon: icon,
+            // (string | optional) the class name you want to apply to that specific message
+            class_name: type + '-notice'
+        });
+    }
+
+    function ValFechaDesdeHasta(DesdeId, HastaId, MensajeError) {
+        if ($('#' + DesdeId).val() >= $('#' + HastaId).val()) {
+            NotifNoIntrusive(MensajeError, "Error", 1000, "fa fa-calendar", 'error');
+            return false;
+        } else {
+
+            return true;
+        }
+    }
+</script>
+
+@if (TempData["NotifiactionOnLoad"] != null)
+{
+    var data = TempData["NotifiactionOnLoad"] as NotificationData;
+    
+    <script>
+        $(function() {
+            swal("@data.Titulo",
+                "@data.Contenido",
+                "@data.Tipo");
+        })
+    </script>
+}
+<template id="NotifTemplate">
+    <a href="javascript:void(0);" class="dropdown-item notify-item">
+        <div class="notify-icon bg-primary">
+            <i class="mdi mdi-cart-outline iconoNotif"></i>
+        </div>
+        <p class="notify-details">
+            <b class="tituloNotif"></b><small class="text-muted cuerpoNotif"></small>
+        </p>
+    </a>
+</template>

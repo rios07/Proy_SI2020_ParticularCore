@@ -1,0 +1,67 @@
+-- =====================================================
+-- Descripción: Inserta valores genericos, que no son los principales, y podrían cambiar.
+-- Script: DB_ParticularCore__C19d_Insert Values del Sistema_Prioritarios 4 - Post Tablas y Paginas.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+				-- Variable que utilizamos en los insert - INICIO
+					DECLARE	@Seccion_Administracion VARCHAR(30)
+						,@Seccion_Intranet VARCHAR(30)
+						,@Seccion_Web VARCHAR(30)
+						,@Seccion_PrivadaDelUsuario VARCHAR(30)
+		
+					EXEC @Seccion_Administracion = ufc_Secciones__Administracion
+					EXEC @Seccion_Intranet = ufc_Secciones__Intranet
+					EXEC @Seccion_Web = ufc_Secciones__Web
+					EXEC @Seccion_PrivadaDelUsuario = ufc_Secciones__PrivadaDelUsuario
+					
+					DECLARE @UsuarioQueEjecutaId INT = '1' -- OJO, q si va UsuarioId=1 -- > VA EN ContextoId=1 --> no logueable
+						,@FechaDeEjecucion DATETIME = GetDate()
+						
+						,@Token                     VARCHAR(40) = 'OperacionDeCore'
+ 						
+ 						--,@Seccion					VARCHAR(30) = @Seccion_Administracion -- Las páginas que se crearán deben ir es esta sección.
+						,@CodigoDelContexto			VARCHAR(40) = NULL
+						
+						,@sResSQL VARCHAR(1000)	
+						,@id INT
+						,@Nombre VARCHAR(80)
+						,@Mensaje VARCHAR(MAX)
+						,@TablaDelExec VARCHAR(80)
+						--,@ContextoId_SinContexto INT = '1'
+				-- Variable que utilizamos en los insert - FIN
+				
+				
+				
+-- INSERT VALUES: SPs - INICIO
+	PRINT 'Insertando SPs' -- Sirven para excluirlos de que se mire permisos en ellos
+	INSERT INTO SPs (Nombre, SeDebenEvaluarPermisos) VALUES ('usp_TablaDinamica__BuscarLosRegFKsQueLaApuntan', '0')
+	INSERT INTO SPs (Nombre, SeDebenEvaluarPermisos) VALUES ('usp_Recursos__EsResponsableDelRecurso', '0')
+	SELECT * FROM SPs
+-- INSERT VALUES: SPs - FIN
+
+
+
+				
+-- INSERT VALUES: SPs - INICIO
+	PRINT 'Insertando TablasYFuncionesDePaginas' -- Sirven para excluirlos de que se mire permisos en ellos
+	
+	DECLARE @TablaId INT
+		, @FuncionDePaginaId INT
+	
+	SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ExtensionesDeArchivos')
+	SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+	INSERT INTO TablasYFuncionesDePaginas (TablaId, FuncionDePaginaId, SeDebenEvaluarPermisos) VALUES (@TablaId, @FuncionDePaginaId, '0')
+	
+	SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ExtensionesDeArchivos')
+	SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+	INSERT INTO TablasYFuncionesDePaginas (TablaId, FuncionDePaginaId, SeDebenEvaluarPermisos) VALUES (@TablaId, @FuncionDePaginaId, '0')
+	
+	SELECT * FROM TablasYFuncionesDePaginas
+-- INSERT VALUES: TablasYFuncionesDePaginas - FIN
+
+-- ---------------------------
+-- Script: DB_ParticularCore__C19d_Insert Values del Sistema_Prioritarios 4 - Post Tablas y Paginas.sql - FIN
+-- =====================================================

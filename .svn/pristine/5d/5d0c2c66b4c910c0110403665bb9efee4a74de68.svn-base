@@ -1,0 +1,174 @@
+﻿<script>
+    function Permiso() {
+        swal('Usted no tiene permisos para realizar esta acción', '', 'warning');
+    }
+    var cantidadNotif = 0;
+    function CargarNotif() {
+
+        $.ajax({
+            url: '@Url.Action("CargarNotificaciones")',
+            type: 'post',
+            dataType: 'json',
+            //data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function (retorno) {
+
+                retorno.forEach(AgregarNotificacion);
+                $('.noti-icon-badge').html(cantidadNotif);
+            }
+        });
+
+
+
+    }
+
+   
+        
+   
+    function AgregarNotificacion(retorno) {
+        var template = $('#NotifTemplate')[0];
+        var clone = document.importNode(template.content, true);
+
+        var lblIcono = clone.querySelector(".iconoNotif");
+        lblIcono.textContent = retorno.IconoCss;
+
+        var lblTitulo = clone.querySelector(".tituloNotif");
+        lblTitulo.textContent = retorno.Tabla;
+
+        var lblCuerpo = clone.querySelector(".cuerpoNotif");
+        lblCuerpo.textContent = retorno.Cuerpo;
+
+        var lblLink = clone.querySelector(".notify-item");
+        lblLink.href = '/intranet/' + retorno.Tabla +'/Registro/'+ retorno.RegistroId;
+        $(lblLink).attr('onClick', 'return NotificacionVista(' + retorno.Id + ');'); 
+
+        if (!retorno.Leida) {
+            var lblIcon = clone.querySelector(".notify-icon");
+            lblIcon.className += ' pulse';
+            cantidadNotif++;
+
+        }
+        $('#notificaciones').append(clone);
+    }
+
+    function NotificacionVista(id) {
+
+        $.ajax({
+            url: '@Url.Action("NotificacionVista")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify({ pParam: id }),
+            contentType: 'application/json',
+            success: function (data) {
+                return true;
+            },
+        });
+    }
+
+    $(function () {
+        var DatePickerOptionsExist = true;
+        try {
+            if (DatePickerOptions)
+                DatePickerOptionsExist = true;
+        } catch (e) { DatePickerOptionsExist = false; }
+
+        if (DatePickerOptionsExist) {
+            if (DatePickerOptions == "mes/anio") {
+                $(".datepicker").datepicker({
+                    format: "yyyy-mm",
+                    viewMode: "months",
+                    minViewMode: "months"
+                });
+                var date = new Date();
+                var fecha = date.getFullYear() + '-' + (date.getMonth() + 1);
+                $('.datepicker').val(fecha);
+            }
+        } else {
+            $(".datepicker").datepicker({
+                format: "yyyy-mm-dd",
+
+            });
+            if ($('.datepicker').val() == '1/1/0001 00:00:00') {
+                var date = new Date();
+                var fecha = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+                $('.datepicker').val(fecha);
+            }
+
+            CargarNotif();
+
+        }
+        //$.fn.datetimepicker.dates['es'] = {
+        //    days: ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"],
+        //    daysShort: ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"],
+        //    daysMin: ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"],
+        //    months: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+        //    monthsShort: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+        //    today: "Hoy"
+        //};
+        $('.datetimepicker').datetimepicker({
+            language: 'es',
+            autoclose: true
+        });
+        $('.timepicker').datetimepicker({
+            language: 'es',
+            //pickDate: false,
+            format: 'HH:mm',
+            autoclose: true
+        });
+
+        $('.select2').select2({
+            width: '100%',
+            placeholder: "Seleccione..."
+        });
+        // Adapto a valores de las anottations de mvc
+        $('input[data-val-length-max]').attr('maxlength', function () {
+            return $(this).attr("data-val-length-max");
+        });
+        $('input[data-val-length-max]').maxlength();
+    });
+
+    function RecargarDDL(pSelector, pDataArray) {
+        $('#' + pSelector).children('option').remove();
+
+        for (var i = 0; i < pDataArray.length; i++) {
+            $('#' + pSelector).append('<option value="' + pDataArray[i].Id + '">' + pDataArray[i].Nombre + '</option>');
+        }
+    };
+
+    function NotifNoIntrusive(texto, titulo = '', tiempo = '', icon = '', type = 'success') {
+        $.extend($.gritter.options, {
+            position: 'bottom-left',
+        });
+        $.gritter.add({
+            // (string | mandatory) the heading of the notification
+            title: titulo,
+            // (string | mandatory) the text inside the notification
+            text: texto,
+            // (int | optional) the time you want it to be alive for before fading out
+            time: tiempo,
+            // (string) specify font-face icon  class for close message
+            close_icon: 'l-arrows-remove s16',
+            // (string) specify font-face icon class for big icon in left. if are specify image this will not show up.
+            icon: icon,
+            // (string | optional) the class name you want to apply to that specific message
+            class_name: type + '-notice'
+        });
+    }
+
+    function ValFechaDesdeHasta(DesdeId, HastaId, MensajeError) {
+        if ($('#' + DesdeId).val() >= $('#' + HastaId).val()) {
+            NotifNoIntrusive(MensajeError, "Error", 1000, "fa fa-calendar", 'error');
+            return false;
+        }
+        else {
+
+            return true;
+        }
+    }
+</script>
+<template id="NotifTemplate">
+    <a href="javascript:void(0);" class="dropdown-item notify-item">
+        <div class="notify-icon bg-primary"><i class="mdi mdi-cart-outline iconoNotif"></i></div>
+        <p class="notify-details"><b class="tituloNotif"></b><small class="text-muted cuerpoNotif"></small></p>
+    </a>
+</template>

@@ -1,0 +1,14 @@
+﻿<script src="~/template/plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.bootstrap4.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.buttons.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.responsive.min.js"></script>
+<script src="~/template/js/coreDatatables.js"></script>
+
+
+<script>
+    $(function() {
+        $('[filtro][nulleable]').prepend('<option value="0">-Sin asignar-</option>')
+    })
+
+
+</script>

@@ -1,0 +1,186 @@
+﻿@model ControladoresCore.ViewModels.TareasVM
+@using ControladoresCore.Extensiones
+
+@{
+    ViewBag.Title = "Tareas - Insertar registro";
+}
+
+@using (Html.BeginForm())
+{
+    using (Html.BeginCard("Nueva Tarea"))
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            @Html.HiddenFor(model => Model.TablaDeReferencia)
+            @Html.HiddenFor(model => Model.RegistroId)
+            <div class="row">
+
+                <div class=" col-sm-12">
+                    <h5 class="pull-right text-muted " style="
+                    padding-top: -20px;
+                    border-top-width: -20px;
+                    margin-top: -10px;
+                    padding-top: 0px;">
+                        .
+                    </h5>
+                </div>
+            </div>
+            @if (Model.TablaDeReferencia != "" && Model.TablaDeReferencia != "SinTabla"  && Model.RegistroId != 0)
+            {
+
+                <div class="alert alert-info">
+                    La tarea hace referencia al registro del módulo "@Model.TablaDeReferencia" - id=@Model.RegistroId <a href="~/@Model.TablaDeReferencia/Registro/@Model.RegistroId">Abrir</a>
+                </div>
+                <hr />
+
+
+            }
+            <div class="row">
+                <div id="divCampos" class="col-sm-12">
+                    @Html.HiddenFor(model => Model.EstadoDeTarea)
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.Titulo, htmlAttributes: new { @class = "control-label col-md-3 " })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.Titulo, new { htmlAttributes = new { @class = "form-control" } })
+                            @Html.ValidationMessageFor(model => model.Titulo, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.UsuarioOriginanteId, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.DropDownListFor(m => m.UsuarioOriginanteId, new SelectList(Model.Usuarios, "Id", "Nombre", Model.UsuarioOriginanteId), "Seleccione una opcion...", new { @class = "form-control" })
+                            @Html.ValidationMessageFor(model => model.UsuarioOriginanteId, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.UsuarioDestinatarioId, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.DropDownListFor(m => m.UsuarioDestinatarioId, new SelectList(Model.Usuarios, "Id", "Nombre", Model.UsuarioDestinatarioId), "Seleccione una opcion...", new { @class = "form-control" })
+                            @Html.ValidationMessageFor(model => model.UsuarioDestinatarioId, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.TipoDeTareaId, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.DropDownListFor(m => m.TipoDeTareaId, new SelectList(Model.TiposDeTareas, "Id", "Nombre", Model.TipoDeTareaId), "Seleccione una opcion...", new { @class = "form-control" })
+                            @Html.ValidationMessageFor(model => model.TipoDeTareaId, "", new { @class = "text-danger" })
+                        </div>
+                        <button style="margin-left: 10px; margin-top:10px" onclick="return false" class="btn btn-primary  " data-toggle="modal" data-target="#TipoDeTareaIframe">Agregar nuevo tipo de tarea</button>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.ImportanciaDeTareaId, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.DropDownListFor(m => m.ImportanciaDeTareaId, new SelectList(Model.Importancias, "Id", "Nombre", Model.ImportanciaDeTareaId), "Seleccione una opcion...", new { @class = "form-control" })
+                            @Html.ValidationMessageFor(model => model.ImportanciaDeTareaId, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+
+                    <div class="form-group ">
+                        @Html.LabelFor(model => model.FechaDeInicio, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            <div class="input-group" >
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                @Html.EditorFor(model => model.FechaDeInicio, new { htmlAttributes = new { @class = "form-control datepicker", @Value = FuncionesCore.FFechas.FechaAhoraHTML5() } })
+                                @Html.ValidationMessageFor(model => model.FechaDeInicio, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group ">
+                        @Html.LabelFor(model => model.FechaLimite, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            <div class="input-group" >
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                @Html.EditorFor(model => model.FechaLimite, new { htmlAttributes = new { @class = "form-control datepicker", @Value = FuncionesCore.FFechas.FechaAhoraHTML5() } })
+                                @Html.ValidationMessageFor(model => model.FechaLimite, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group ">
+                        @Html.LabelFor(model => model.EnviarCorreo, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            <div class="input-group" style="max-width:350px;">
+                                @Html.CheckBoxFor(model => model.EnviarCorreo)
+                                @Html.ValidationMessageFor(model => model.EnviarCorreo, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.Observaciones, htmlAttributes: new { @class = "control-label col-md-2" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.Observaciones, new { htmlAttributes = new { @class = "form-control  html-text-editor" } })
+                            @Html.ValidationMessageFor(model => model.Observaciones, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+                </div>
+
+            
+            </div>
+        </div>
+    }
+    <div class="card" id="dyn_2">
+        <h4 style="padding:1px; background-color:var(--color-primary)" class="card-header mt-0"></h4>
+        <div class="card-body fade-in p-2">
+            <div class="col-lg-12 pull-left botonera">
+                @HtmlHelperExtension.Boton("Tareas","Listado",ViewBag.Seccion)
+                @HtmlHelperExtension.Boton("Insert", ViewBag.DatosDeUnaPagina.AutorizadoACargarLaPagina,ViewBag.Seccion)
+            </div>
+        </div>
+    </div>
+}
+
+<div class="modal fade" id="TipoDeTareaIframe" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header pb-2 pt-0 pl-2 pr-1" style="background: var(--color-primary);color: #ffffff;">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span color="white" aria-hidden="true">&times;</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="myModalLabel2">Agregar tipo de Tarea</h4>
+            </div>
+            <div class="modal-body row" style="height:600px">
+
+                <iframe src="~/Administracion/TiposDeTareas/Insert" frameborder="0" id="IframeSourceTipoDeTarea" style="position: relative; height: 100%; width: 100%;">
+                    <p>Navegador no compatible. Utilice otro o inserte desde la pagina correspondiente.</p>
+                </iframe>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function manejarMensaje() {
+
+        $.ajax({
+            url: '@Url.Action("RecargarDDL")',
+            type: 'get',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (data) {
+                var VM = data;
+                var arraylist = new Array();
+                for (var i = 0; i < VM.TiposDeTareas.length; i++) {
+                    arraylist.push({ Id: VM.TiposDeTareas[i].Id, Nombre: VM.TiposDeTareas[i].Nombre });
+                }
+                RecargarDDL('TipoDeTareaId', arraylist);
+
+                $('#TipoDeTareaIframe').modal('toggle');
+                document.getElementById("IframeSourceTipoDeTarea").contentDocument.location.reload(true);
+                swal("Tipo de Tarea agregado con exito!", "", "success")
+
+            },
+
+        });
+    }
+</script>

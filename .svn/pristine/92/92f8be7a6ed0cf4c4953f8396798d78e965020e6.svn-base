@@ -1,0 +1,70 @@
+-- =====================================================
+-- Descripción: SPs que controlan los permisos
+-- Script: 09__Core__Permisos.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+
+
+IF (OBJECT_ID('usp_PrecargaInicialDeUnaPagina') IS NOT NULL) DROP PROCEDURE usp_PrecargaInicialDeUnaPagina
+GO
+-- Si @FuncionDePagina = 'Insert' --> AutorizadoA_OperarLaPagina indica si puede Eliminar/Activar in registro
+CREATE PROCEDURE usp_PrecargaInicialDeUnaPagina
+		@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+
+		-- La Página de .NET se define con la Tabla y la FuncionDePagina
+		,@Tabla							VARCHAR(80) -- Es el Modelo (Nombre del controlador) de 
+		,@FuncionDePagina				VARCHAR(30) -- Es la Action Result de c/u
+		,@sResSQL						VARCHAR(1000) OUTPUT
+	AS
+	BEGIN
+		SET @sResSQL = ''
+
+		DECLARE @FuncionDePaginaId INT = (SELECT id FROM FuncionesDePaginas WHERE Nombre = @FuncionDePagina)
+		DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+		DECLARE @PaginaId INT = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+
+		-- Necesito tener al menos 1 columna con la que relacionar las tablas --> Rel
+		SELECT *
+		FROM
+		(
+			SELECT
+				1 AS Rel
+				,MAX(CAST(RPRP.AutorizadoA_CargarLaPagina AS INT)) AS AutorizadoACargarLaPagina
+				,MAX(CAST(RPRP.AutorizadoA_OperarLaPagina AS INT)) AS AutorizadoAOperarLaPagina
+				,MAX(CAST(RPRP.AutorizadoA_VerRegAnulados AS INT)) AS AutorizadoAVerRegAnulados
+				,MAX(CAST(RPRP.AutorizadoA_AccionesEspeciales AS INT)) AS AutorizadoAAccionesEspeciales
+			FROM RelAsig_RolesDeUsuarios_A_Usuarios RARU
+				INNER JOIN RelAsig_RolesDeUsuarios_A_Paginas RPRP ON RARU.RolDeUsuarioId = RPRP.RolDeUsuarioId
+			WHERE 
+				RARU.UsuarioId = @UsuarioQueEjecutaId AND RPRP.PaginaId = @PaginaId
+				AND RARU.FechaDesde <= @FechaDeEjecucion
+				AND	(RARU.FechaHasta IS NULL OR RARU.FechaHasta >= @FechaDeEjecucion)
+		) AS T1
+		INNER JOIN
+		(
+			SELECT 
+				1 AS Rel
+				,(CASE WHEN P.Titulo IS NULL OR P.Titulo = '' THEN T.NombreAMostrar + ' - ' + FP.NombreAMostrar
+					ELSE P.Titulo END) AS Titulo
+				,P.Observaciones AS Notas
+				,COALESCE(P.Tips, '') AS Tips
+			FROM Paginas P
+				INNER JOIN Tablas T ON P.TablaId = T.id
+				INNER JOIN FuncionesDePaginas FP ON P.FuncionDePaginaId = FP.id 
+			WHERE
+				P.id = @PaginaId
+		) AS T2 ON T1.Rel = T2.Rel
+	END
+GO
+-- SP-TABLA:  - FIN
+
+
+
+
+-- ---------------------------------
+-- Script: 09__Core__Permisos.sql - FIN
+-- =====================================================

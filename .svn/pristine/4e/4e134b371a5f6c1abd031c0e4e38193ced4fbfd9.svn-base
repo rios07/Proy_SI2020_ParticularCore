@@ -1,0 +1,1985 @@
+-- =====================================================
+-- Author:		Facundo Campaña
+-- CREATE date: 19/04/2013
+-- Description:	INSERT VALUES DEL SISTEMA - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- INSERT VALUES DEL SISTEMA: - Inicio
+-- -------------------------
+
+
+
+				-- Variable que utilizamos en los insert - INICIO
+					DECLARE @UsuarioQueEjecutaId INT -- OJO, q si va UsuarioId=1 -- > VA EN ContextoId=1 --> no logueable
+						,@FechaDeEjecucion DATETIME = GetDate()
+						,@sResSQL VARCHAR(1000)	
+						,@id INT
+						,@ContextoId_SinContexto INT = 1
+						,@ContextoId_Sistemas INT = 2
+						,@ContextoId_Pruebas INT = 3
+				-- Variable que utilizamos en los insert - FIN
+				
+				
+
+-- INSERT VALUES: Contextos - INICIO
+	PRINT 'Insertando Contextos'
+	INSERT INTO Contextos (Numero, Nombre, Codigo, CarpetaDeContenidos) VALUES ('1', 'Sin Contexto', 'SinContexto', 'CarpSinContexto')
+	INSERT INTO Contextos (Numero, Nombre, Codigo, CarpetaDeContenidos) VALUES ('2', 'Sistemas', 'Sistemas', 'CarpetaDeSist')
+	INSERT INTO Contextos (Numero, Nombre, Codigo, CarpetaDeContenidos) VALUES ('3', 'Pruebas', 'Pruebas', 'CarpetaDePruebas')
+	SELECT * FROM Contextos
+-- INSERT VALUES: Contextos - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeActores - INICIO // Lo necesito antes que a los Actores
+	PRINT 'Insertando TiposDeActores'
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Sistemas', 'Para el departamento de Sistemas') --id=1
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Internos', 'Para los usuarios principales del proyecto')
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Clientes', 'Para los clientes del proyecto')
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Externos', 'Para colaboradores externos al proyecto')
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Contratistas', 'Para los contratistas del proyecto')
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Comitentes', 'Para los comitentes del proyecto')
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Proveedoes', 'Para Proveedores') --id=7
+	INSERT INTO TiposDeActores (Nombre, Observaciones) VALUES ('Otros', 'Para tipos de actores no contemplados')
+	SELECT * FROM TiposDeActores
+	-- INSERT VALUES: TiposDeActores - FIN
+	-- INSERT VALUES: Actores - INICIO
+	PRINT 'Insertando Actores'
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_SinContexto, 1, 'SinActor', 'SinActor') --id=1
+
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 1, 'Sistemas', 'Sistemas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 2, 'Administración', 'Administración')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 2, 'Compras', 'Compras')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 2, 'Ventas', 'Ventas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 7, 'Prov May.', 'Proveedores Mayoristas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Sistemas, 7, 'Prov Min.', 'Proveedores Minoristas')
+		
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 1, 'Sistemas', 'Sistemas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 2, 'Administración', 'Administración')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 2, 'Compras', 'Compras')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 2, 'Ventas', 'Ventas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 7, 'Prov May.', 'Proveedores Mayoristas')
+	INSERT INTO Actores (ContextoId, TipoDeActorId, Codigo, Nombre) VALUES (@ContextoId_Pruebas , 7, 'Prov Min.', 'Proveedores Minoristas')
+	SELECT * FROM Actores
+-- INSERT VALUES: Actores - FIN
+
+
+
+
+-- INSERT VALUES: FuncionesDePaginas - INICIO
+	PRINT 'Insertando FuncionesDePaginas'
+	-- El 'Eliminar' o Activar/Desactivar de un registro no es una página, y el permiso se resuelve con el PermiteOperar de la Pagina 'Registro'
+	-- El 'Exportar' de un registro no es una página, y el permiso se resuelve con el PermiteOperar de la Pagina de Listado en cuestión.
+	-- El 'Enviar' de un registro no es una página, y el permiso se resuelve con el PermiteOperar de la Pagina de Listado en cuestión.
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('1', 'Sin Página', '-Sin Página-', 'Para funcionalidades no asociadas a páginas', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('2', 'Inicio', 'Página de Bienvenida', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('3', 'Insert', 'Agregar un registro', '', '1')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('4', 'Registro', 'Registro seleccionado', '', '1')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('5', 'Update', 'Actualizar los datos de un registro', '', '1')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('6', 'Listado', 'Listado', '', '1')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('7', 'ListadoAvanzado', 'Listado avanzado', '', '1')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('8', 'ListadoDeControl', 'Listado de control', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('9', 'CambiarPassword', 'Cambio de contraseña', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('10', 'ResetPassword', 'Reseteo de contraseña', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('11', 'Grafico', 'Gráficos', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('12', 'Tablero', 'Tablero de resultados', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('13', 'Mapa', 'Mapa', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('14', 'ListadoDDL', 'Listado DDL', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('15', 'Login', 'Inicio de Sesion', '', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('16', 'Pendientes', 'Pendientes', 'Por ejemplo para envíos pendientes de correos', '0')
+	INSERT INTO FuncionesDePaginas (id, Nombre, NombreAMostrar, Observaciones, GeneraPagina) VALUES ('17', 'TableroGeneral', 'TableroGeneral', '', '0')
+	SELECT * FROM FuncionesDePaginas
+-- INSERT VALUES: FuncionesDePaginas - FIN
+
+
+
+
+-- ESTO LO CARGAMOS DE INICIO, DEJARLO ACÁ AUNQUE NO ESTÉ POR ABC
+	-- ARRANCO CON LOS ROLES p/PODER ARGREGAR USUARIOS
+	-- INSERT VALUES: RolesDeUsuarios - INICIO
+	-- La prioridad la utilizamos p la asignación de permisos
+	PRINT 'Insertando RolesDeUsuarios'
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('1', 'Master Admin', 'Solo para los Desarrolladores del Sistema.', '100', 'False')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('2', 'Administrador', 'No accede a páginas exclusivas del MasterAdmin; Para el resto: Administración completa de las funcionalidades ofrecidas.', '200', 'False')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('3', 'Supervidor', 'Operador Avanzado, que además permite la planificación y consulta de todo el sitio.', '300', 'True')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('4', 'Operador Avanzado', 'Operador con algunas atribuciones de administrador.', '400', 'True')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('5', 'Operador', 'Operador de las funciones cotidianas de trabajo.', '500', 'True')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('6', 'Consultor', 'Permite la consulta general de las paginas de acceso del Operador, pero no la operación de las funciones cotidianas de trabajo.', '600', 'True')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('7', 'Visitante', 'Solo Podrá Consultar algunas páginas específicas, pero ninguna operación.', '700', 'True')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('8', 'Solo Login', 'Para C/ Usuario Creado, Para q funque el INNER JOIN.', '800', 'False')
+	-- Pondremos prioridad negativa a los roles especificos de tareas, como la de pedir soportes.
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('9', 'Pedir Soportes', 'Realizar, ver y gestionar pedidos de soporte.', '-100', 'False')
+	INSERT INTO RolesDeUsuarios (id, Nombre, Observaciones, Prioridad, SeMuestraEnAsignacionDePermisos) VALUES ('10', 'Administrar Soportes', 'Administrar, Realizar, ver y gestionar pedidos de soporte.', '-200', 'False')
+	SELECT * FROM RolesDeUsuarios
+-- INSERT VALUES: RolesDeUsuarios - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeOperaciones - INICIO // LAS NECESITO ANTES QUE A LOS USUARIOS
+	PRINT 'Insertando TiposDeOperaciones'
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('1', 'Generica', 'Generica', 'Tipo de Operación genérica del sistema')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('2', 'Insert', 'Creado', 'Agregando un Registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('3', 'Update', 'Actualizado', 'Modificando un registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('4', 'Delete', 'Eliminado', 'Eliminando un registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('5', 'Anular', 'Anulado', 'Anulando un registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('6', 'Activar', 'Activado', 'Activando un registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('7', 'Listado', 'Listado', 'Listando registro')
+	INSERT INTO TiposDeOperaciones (id, Nombre, Texto, Observaciones) VALUES ('8', 'Registro', 'Seleccionado', 'Seleccionó un Registro')
+	SELECT * FROM TiposDeOperaciones
+-- INSERT VALUES: TiposDeOperaciones - FIN
+
+
+
+
+-- INSERT VALUES: Usuarios - INICIO // No los puedo agregar con insert por que necesita las "Tablas" asociadas.
+	PRINT 'Insertando Usuarios'
+	DECLARE @ActorId INT = (SELECT id FROM Actores WHERE Nombre = 'Sistemas' AND ContextoId = 2)
+			,@UltimoLoginSesionId INT = RAND()*100000000 -- 8 digitos
+	PRINT 'Insertando Usuario Sistema en Usuarios; id=1' -- Este no lo puedo agregar con SP x q no hay UsuarioQueEjecuta en el Sistema
+	INSERT INTO Usuarios (ActorId, ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+				VALUES (@ActorId, @ContextoId_SinContexto, 'SinUsuario', 'AB4A193C4E0C45643A78A7E53322C9AF9790F0F5', 'Sin', 'Usuario', @UltimoLoginSesionId)
+	
+	PRINT 'Insertando Usuario fac en Usuarios; id=2' -- Este no lo puedo agregar con SP x q no hay UsuarioQueEjecuta en el ContextoId=2
+	SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+	INSERT INTO Usuarios (ActorId, ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+				VALUES (@ActorId, @ContextoId_Sistemas, 'fcampana', '9878F2F32BEC7D3A48676B3FAE8130D0A11A7ED3', 'Facundo', 'Campaña', @UltimoLoginSesionId)
+	
+	SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+	INSERT INTO Usuarios (ActorId, ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+				VALUES (@ActorId, @ContextoId_Sistemas, 'pparent', 'D8FD39D0BBDD2DCF322D8B11390A4C5825B11495', 'Pablo', 'Parent', @UltimoLoginSesionId)
+
+	SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+	INSERT INTO Usuarios (ActorId, ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+				VALUES (@ActorId, @ContextoId_Sistemas, 'femaldi', 'DB25F2FC14CD2D2B1E7AF307241F548FB03C312A', 'Facundo Ernesto Miguel Augusto', 'Emaldi', @UltimoLoginSesionId)
+
+	SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+	INSERT INTO Usuarios (ActorId, ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+				VALUES (@ActorId, @ContextoId_Sistemas, 'jtomas', 'c08991605b638831f64be24b7b04e6ce01db0e37', 'Juan Cruz', 'Tomás', @UltimoLoginSesionId)
+	
+	SELECT * FROM Usuarios
+-- INSERT VALUES: Usuarios - FIN
+
+
+
+	
+
+ -- INSERT VALUES RelAsig_RolesDeUsuarios_A_Usuarios: - INICIO  //  Los necesito para las tablas
+	PRINT 'Insertando RelAsig_RolesDeUsuarios_A_Usuarios'
+	-- NOS SETEO COMO MASTER ADMINS
+	-- Al Usuario-id=1 lo seteo como MasterAdmin para q tenga permisos en los SP q ejecutará
+	INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) VALUES ('1', '1', @FechaDeEjecucion)
+	INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) VALUES ('1', '2', @FechaDeEjecucion)
+	INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) VALUES ('1', '3', @FechaDeEjecucion)
+	INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) VALUES ('1', '4', @FechaDeEjecucion)
+	INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) VALUES ('1', '5', @FechaDeEjecucion)
+	SELECT * FROM RelAsig_RolesDeUsuarios_A_Usuarios
+---- INSERT VALUES RelAsig_RolesDeUsuarios_A_Usuarios: - FIN
+
+				
+				
+
+-- INSERT VALUES: CuentasDeEnvios - INICIO
+	-- Agrego un par para poder testear
+	PRINT 'Insertando CuentasDeEnvios' -- Id = 1:
+	INSERT INTO CuentasDeEnvios (Nombre, CuentaDeEmail, PwdDeEmail, Smtp, Puerto, Observaciones) VALUES ('Email para tareas', 'tareas@sistemas.com', 'XXX', 'smtp.sistemas.com', '25', 'Para los envío de tareas.')
+	--INSERT INTO CuentasDeEnvios (Nombre, CuentaDeEmail, PwdDeEmail, Smtp, Puerto, Observaciones) VALUES ('Email para ??', '??@sistemas.com', 'XXX', 'smtp.sistemas.com', '25', 'Para los envío de ??.')
+	SELECT * FROM CuentasDeEnvios
+-- INSERT VALUES: CuentasDeEnvios - FIN
+
+
+
+
+-- INSERT VALUES: Dispositivos - INICIO
+	PRINT 'Insertando Dispositivos'
+	INSERT INTO Dispositivos (MachineName, OSVersion, UserMachineName, AsignadoAUsuarioId) VALUES ('Sin Dispositivo', '', 'Sin Usaurio', '1')
+	SELECT * FROM Dispositivos
+-- INSERT VALUES: Dispositivos - FIN
+
+
+
+
+-- INSERT VALUES: LoginDeDispositivos - INICIO // Lo necesito antes que las tablas
+	PRINT 'Insertando LoginDeDispositivos id = 1'
+	INSERT INTO LoginDeDispositivos (DispositivoId, UsuarioId, Token, FechaDeEjecucion, InicioValides, FinValidez) VALUES ('1', '1', 'sin token', @FechaDeEjecucion, @FechaDeEjecucion, @FechaDeEjecucion)
+	SELECT * FROM LoginDeDispositivos
+-- INSERT VALUES: LoginDeDispositivos - FIN
+
+
+
+
+-- INSERT VALUES: EstadosDeLogErrores - INICIO
+	PRINT 'Insertando EstadosDeLogErrores'
+	INSERT INTO EstadosDeLogErrores (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('1', 'Por revisar', 'PREV', '1', '')
+	INSERT INTO EstadosDeLogErrores (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('2', 'En revision', 'ENREV', '2', '')
+	INSERT INTO EstadosDeLogErrores (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('3', 'Solucionado', 'SOL', '3', '')
+	SELECT * FROM EstadosDeLogErrores
+-- INSERT VALUES: EstadosDeLogErrores - FIN
+
+
+
+
+-- INSERT VALUES: EstadosDeSoportes - INICIO
+	-- Pedidos Pendientes:
+	PRINT 'Insertando EstadosDeSoportes: Pedidos Pendientes'
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('1', '1. Por revisar', 'POR REVISAR' ,'1', 'Pendiente. - El Pedido Continúa Pendiente.')
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('2', '2. En revisión', 'EN REVISION', '2', 'Lo estamos analizando. - El Pedido Continúa Pendiente.')
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('3', '3. Postergado por el Usuario', 'POS Usuario', '3', 'El usuario posterga la solución. El Pedido Continúa Pendiente.')
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('4', '4. Postergado por Soporte', 'POS Soporte', '4', 'Soportes posterga su solución; otras prioridades. El Pedido Continúa Pendiente.')
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('5', '5. Esperando Al Usuario', 'UsuarioAvisa', '5', 'El Usuario avisa cuando aplicar la solución. El Pedido Continúa Pendiente.')
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('6', '6. Solucion Programada', 'SOL PROGRAM', '6', 'Solución determinada; Se aplicará en otro momento. Pedido Continúa Pendiente.')
+	-- Pedidos Cerrados:
+	PRINT 'Insertando EstadosDeSoportes: Pedidos Cerrados'
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones, CierraSoporte) VALUES ('7', '7. Resuelto por el Usuario', 'RESOLV USER', '7', 'El Usuario lo resolvió por su cuenta. - Se Cierra el Pedido.', 1)
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones, CierraSoporte) VALUES ('8', '8. Sin Solucionar', 'SIN SOLUCION', '8', 'No tiene Solución. - Se Cierra el Pedido.', 1)
+	INSERT INTO EstadosDeSoportes (id, Nombre, Nomenclatura, Orden, Observaciones, CierraSoporte) VALUES ('9', '9. Solucionado', 'SOLUCIONADO', '9', 'Se Cierra el Pedido proveyendo una solución.', 1)
+	SELECT * FROM EstadosDeSoportes
+-- INSERT VALUES: EstadosDeSoportes - FIN
+
+
+
+
+-- INSERT VALUES: EstadosDeTareas - INICIO
+	PRINT 'Insertando EstadosDeTareas'
+	-- Asignada, Iniciada, Finalizada, Aplazada, Esperando Acción, Etc.
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('1', '1. Asignada', '1-Asig' ,'10', 'La tarea se le ha asignado a un usaurio para que la realice.')
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('2', '2. Iniciada', '2-Inic', '20', 'El usuario tomó conocimiento de la tarea, y la comenzó.')
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('3', '3. Esperando Acción', '3-E.A.', '30', 'El usuario está esperando la acción de otro, o de algún suceso para poder continuar con la tarea.')
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('4', '4. Aplazada', '4-Apl', '-10', 'La tarea ha sido aplazada y no se realizará por el momento.')
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('5', '5. Finalizada', '5-Fin', '50', 'La tarea ha finalizado satisfactoriamente.')
+	INSERT INTO EstadosDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('6', '6. Finalizada Sin Cumplir', '5-Fin-X', '100', 'La tarea ha finalizado, pero sin cumplir con el objetivo.')
+-- INSERT VALUES: EstadosDeTareas - FIN
+
+
+
+
+-- INSERT VALUES: IconosCSS - INICIO -- Los necsito acá, por que los usan las tablas
+	PRINT 'Insertando IconosCSS'
+	--id=1: DEFAULT
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Default-*', 'fa fa-asterisk', 'Archivo por defecto para todos los no reconocidos o indicados.')
+	DECLARE @IconoGenericoCSSId INT = SCOPE_IDENTITY() -- Guardo el icono generico para meterlo en las tablas.
+				
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Exclamación !', 'fa fa-exclamation', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Life Ring Gray', 'fa fa-life-ring color-gray-light', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Estrella', 'glyphicon glyphicon-star', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Ojo', 'fa fa-eye', '')
+	DECLARE @IconoOjoCSSId INT =  SCOPE_IDENTITY()
+		
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('pencil square', 'fa fa-pencil-square', '')
+	DECLARE @IconoPencilCSSId INT =  SCOPE_IDENTITY()
+
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Basic Pen', 'l-basic-todolist-pen', '')
+	DECLARE @IconoPenCSSId INT =  SCOPE_IDENTITY()
+		
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Ojo Abierto', 'glyphicon glyphicon-eye-open', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Signo +', 'glyphicon glyphicon-plus-sign', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Lapiz', 'glyphicon glyphicon-pencil', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Libro', 'glyphicon glyphicon-book', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Candado Abierto', 'fa fa-unlock', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Candado Cerrado', 'fa fa-lock', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Cruz', 'glyphicon glyphicon-remove', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Persona', 'glyphicon glyphicon-user', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Grupo', 'fa fa-group', '')
+	DECLARE @IconoGrupoCSSId INT =  SCOPE_IDENTITY()
+	
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Fuego', 'glyphicon glyphicon-fire', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Adjunto', 'glyphicon glyphicon-paperclipn', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Bloqueo', 'fa fa-ban', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Editar', 'fa fa-edit', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Borrar', 'fa fa-eraser', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Ticket', 'fa fa-ticket', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Comentario', 'fa fa-commenting', '')
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('software', 'l-software-transform-bezier', '')
+	DECLARE @IconoActoresCSSId INT =  SCOPE_IDENTITY()
+	
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('warning', 'glyphicon glyphicon-warning-sign', '')
+	DECLARE @IconoWarningCSSId INT =  SCOPE_IDENTITY()
+	
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('basicwarning', 'l l-basic-webpage-multiple', '')
+	DECLARE @IconoBasicWebpageCSSId INT =  SCOPE_IDENTITY()
+
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('webpage', 'l-basic-webpage-img-txt', '')
+	DECLARE @IconoWebpageCSSId INT =  SCOPE_IDENTITY()
+	
+	INSERT INTO IconosCSS (Nombre, CSS, Observaciones) VALUES ('Soportes', 'fa fa-support', '')
+	DECLARE @IconoSupportCSSId INT =  SCOPE_IDENTITY()
+-- INSERT VALUES: IconosCSS - FIN
+
+
+
+
+-- INSERT VALUES: ImportanciasDeTareas - INICIO
+	PRINT 'Insertando ImportanciasDeTareas'
+	-- id=1 importancia "media", DEFAULT
+	INSERT INTO ImportanciasDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('1', '2. Media', '2-Media' ,'20', 'Importancia normal, valor por defecto.')
+	INSERT INTO ImportanciasDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('2', '1. Baja', '1-Baja', '10', 'Importancia baja.')
+	INSERT INTO ImportanciasDeTareas (id, Nombre, Nomenclatura, Orden, Observaciones) VALUES ('3', '3. Alta', '3-Alta', '50', 'La mayor importancia.')
+-- INSERT VALUES: ImportanciasDeTareas - FIN
+
+
+
+
+---- INSERT VALUES: Tablas - INICIO -- Las necesito antes que las Páginas
+	PRINT 'Insertando Tablas'
+	SET @UsuarioQueEjecutaId = 1 
+	
+	--1ero va la de sistema, p q tenga id=1
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Sin Tabla'  
+		,@NombreAMostrar = 'Sin Tabla'
+		,@Nomenclatura = 'SinTabla'
+		,@Observaciones	= 'Para registrar los errores y registros no asociados con tablas.'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla de Sistema - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada			
+
+
+		PRINT 'Insertando Pagina DE SISTEMA'
+		INSERT INTO Paginas (TablaId
+						,FuncionDePaginaId
+						,Nombre
+						,Titulo
+						,Observaciones
+						,SeMuestraEnAsignacionDePermisos
+						,SeGeneranAutoSusSPsDeABM
+						,SeGeneranAutoSusSPsDeRegistros
+						,SeGeneranAutoSusSPsDeListados
+						)
+				VALUES (1
+						,1
+						,'Sin Página'
+						,'Sin Página'
+						,'Para los errores y opciones sin páginas'
+						,1
+						,0
+						,0
+						,0)
+		-- El resto de Páginas las agregan automáticamente las TABLAS
+
+	
+	--2da va la de "Tablas" q la necesito p/ los LogRegistros, y LogErrores
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Tablas'
+		,@NombreAMostrar = 'Tablas del sitio'
+		,@Nomenclatura = 'T'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Tablas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	
+	--3ro va la de Paginas, por q la necesitamos p los LogRegistros, y LogErrores
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoWebpageCSSId
+		,@Nombre = 'Paginas'
+		,@NombreAMostrar = 'Páginas del sitio'
+		,@Nomenclatura = 'P'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Paginas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoActoresCSSId
+		,@Nombre = 'Actores'
+		,@NombreAMostrar = 'Actores'
+		,@Nomenclatura = 'ACT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Actores - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Archivos'
+		,@NombreAMostrar = 'Archivos'
+		,@Nomenclatura = 'ARCH'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operador'
+		,@RolMenosPrioritarioQueOpera = 'Operador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Administrador'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Archivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Contactos' 
+		,@NombreAMostrar = 'Contactos'
+		,@Nomenclatura = 'CTOS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '1'
+		,@RolMenosPrioritarioQueCarga = 'Operador'
+		,@RolMenosPrioritarioQueOpera = 'Operador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Operador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Operador'
+		,@CampoAMostrarEnFK	= 'NombreCompleto'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Contactos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+		
+		
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Contextos' 
+		,@NombreAMostrar = 'Contextos'
+		,@Nomenclatura = 'CX'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Contextos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+			
+		
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'CuentasDeEnvios' 
+		,@NombreAMostrar = 'Cuentas de envíos de correos'
+		,@Nomenclatura = 'CDE'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla CuentasDeEnvios - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Dispositivos' 
+		,@NombreAMostrar = 'Dispositivos'
+		,@Nomenclatura = 'DISP'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'UserMachineName'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Dispositivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'EnviosDeCorreos' 
+		,@NombreAMostrar = 'Envíos de correos'
+		,@Nomenclatura = 'EDC'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operador Avanzado'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Asunto'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla EnviosDeCorreos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'EstadosDeLogErrores'
+		,@NombreAMostrar = 'Estados de los logs de errores'
+		,@Nomenclatura = 'EDLE'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla EstadosDeLogErrores - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'EstadosDeSoportes' 
+		,@NombreAMostrar = 'Estados de soportes'
+		,@Nomenclatura = 'EDS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla EstadosDeSoportes - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'EstadosDeTareas' 
+		,@NombreAMostrar = 'Estados de las tareas'
+		,@Nomenclatura = 'EDT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla EstadosDeTareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'ExtensionesDeArchivos' 
+		,@NombreAMostrar = 'Extensiones de archivos'
+		,@Nomenclatura = 'EDA'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'FuncionesDePaginas'
+		,@NombreAMostrar = 'Funciones de las páginas'
+		,@Nomenclatura = 'FDP'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Funciones de las páginas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'GruposDeContactos' 
+		,@NombreAMostrar = 'Grupos de contactos'
+		,@Nomenclatura = 'GDCTOS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operador'
+		,@RolMenosPrioritarioQueOpera = 'Operador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Operador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Operador'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla GruposDeContactos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+		
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Iconos'
+		,@NombreAMostrar = 'Iconos'
+		,@Nomenclatura = 'IC'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'IconosCSS'
+		,@NombreAMostrar = 'Iconos css'
+		,@Nomenclatura = 'ICSS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla IconosCSS - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Importaciones'
+		,@NombreAMostrar = 'Importaciones'
+		,@Nomenclatura = 'IMT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '1'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Importaciones - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+		
+		
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'ImportanciasDeTareas'
+		,@NombreAMostrar = 'Importancias de tareas'
+		,@Nomenclatura = 'IDT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ImportanciasDeTareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'LogEnviosDeCorreos'  
+		,@NombreAMostrar = 'Seguimiento de los envíos de correos'
+		,@Nomenclatura = 'LEDC'  
+		,@Observaciones	= 'Registra todos los envíos, tanto satisfactorios como fallidos que se produzcan.'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operador'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Fecha'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = 'ObservacionesDeRevision'
+		,@CamposAExcluirEnElUpdate = 'EnvioDeCorreoId, Satisfactorio, Fecha, Observaciones'
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla LogEnviosDeCorreos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoWarningCSSId
+		,@Nombre = 'LogErrores'  
+		,@NombreAMostrar = 'Seguimiento de errores'
+		,@Nomenclatura = 'LE'  
+		,@Observaciones	= 'Registra todos los errores que se produzcan'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla LogErrores - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoSupportCSSId
+		,@Nombre = 'LogLogins'  
+		,@NombreAMostrar = 'Logs de Logins'
+		,@Nomenclatura = 'LL'
+		,@Observaciones	= 'Seguimiento de inicios de sesión'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'FechaDeEjecucion'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla LogLogins - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'LogRegistros'
+		,@NombreAMostrar = 'Historia de los registros de todas las tablas'
+		,@Nomenclatura = 'LR'
+		,@Observaciones	= 'Registra los cambios efectuados en cada modificacion de todos los registros de todas las tablas.'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla LogRegistros - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Notificaciones'
+		,@NombreAMostrar = 'Notificaciones de los registros de todas las tablas'
+		,@Nomenclatura = 'NOTIF'
+		,@Observaciones	= 'Registra las notificaciones a mostrar a los usuarios ante ciertos eventos.'
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Numero'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = 'Leida'
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla LogRegistros - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+			
+			
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'ParametrosDelSistema' 
+		,@NombreAMostrar = 'Parametros del sistema'
+		,@Nomenclatura = 'PDS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'ContextoId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ParametrosDelSistema - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'PrioridadesDeSoportes' 
+		,@NombreAMostrar = 'Prioridades de soportes'
+		,@Nomenclatura = 'PDSop'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla PrioridadesDeSoportes - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Publicaciones' 
+		,@NombreAMostrar = 'Publicaciones'
+		,@Nomenclatura = 'PUB'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Fecha'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '0'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Publicaciones - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+		
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RecorridosDeDispositivos' 
+		,@NombreAMostrar = 'Recorridos de dispositivos'
+		,@Nomenclatura = 'PUB'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RecorridosDeDispositivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+		
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RelAsig_Contactos_A_GruposDeContactos' 
+		,@NombreAMostrar = 'Asignación de contactos a grupos'
+		,@Nomenclatura = 'ACAG'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operadores'
+		,@RolMenosPrioritarioQueOpera = 'Operadores'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Operadores'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Operadores'
+		,@CampoAMostrarEnFK	= 'GrupoDeContactoId'
+		,@CampoQuePuedeSerIdString = 'ContactoId'
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_Contactos_A_GruposDeContactos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RelAsig_Contactos_A_TiposDeContactos' 
+		,@NombreAMostrar = 'Asignación de contactos a tipos de contactos'
+		,@Nomenclatura = 'ACAT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Operadores'
+		,@RolMenosPrioritarioQueOpera = 'Operadores'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Operadores'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Operadores'
+		,@CampoAMostrarEnFK	= 'TipoDeContactoId'
+		,@CampoQuePuedeSerIdString = 'ContactoId'
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_Contactos_A_TiposDeContactos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+		
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RelAsig_CuentasDeEnvios_A_Tablas'
+		,@NombreAMostrar = 'Asignación de cuentas de email a las tablas'
+		,@Nomenclatura = 'RCAT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'CuentaDeEnvioId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_CuentasDeEnvios_A_Tablas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoBasicWebpageCSSId
+		,@Nombre = 'RelAsig_RolesDeUsuarios_A_Paginas'
+		,@NombreAMostrar = 'Asignación de permisos de roles de usuarios a páginas del sitio'
+		,@Nomenclatura = 'RDUAP'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'PaginaId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_RolesDeUsuarios_A_Paginas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGrupoCSSId
+		,@Nombre = 'RelAsig_RolesDeUsuarios_A_Usuarios'
+		,@NombreAMostrar = 'Asignación de roles de usuarios a usuarios'
+		,@Nomenclatura = 'RDUAU'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'UsuarioId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_RolesDeUsuarios_A_Usuarios - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RelAsig_Subsistemas_A_Publicaciones' 
+		,@NombreAMostrar = 'Asignación de subsistemas a publicaciones'
+		,@Nomenclatura = 'ASAP'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'PublicacionId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_Subsistemas_A_Publicaciones - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RelAsig_TiposDeContactos_A_Contextos' 
+		,@NombreAMostrar = 'Asignación de tipos de contextos a contextos'
+		,@Nomenclatura = 'ATCAC'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '1'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'TipoDeContactoId'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RelAsig_TiposDeContactos_A_Contextos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'RolesDeUsuarios' 
+		,@NombreAMostrar = 'Roles de usuarios'
+		,@Nomenclatura = 'RDU'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla RolesDeUsuarios - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoSupportCSSId
+		,@Nombre = 'Soportes'
+		,@NombreAMostrar = 'Pedidos de soportes'
+		,@Nomenclatura = 'SOP'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Pedir Soportes'
+		,@RolMenosPrioritarioQueOpera = 'Administrar Soportes'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrar Soportes'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Administrar Soportes'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '0'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Soportes - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Subsistemas'
+		,@NombreAMostrar = 'Subsistemas'
+		,@Nomenclatura = 'SUBS'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Subsistemas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoPencilCSSId
+		,@Nombre = 'Tareas'
+		,@NombreAMostrar = 'Tareas'
+		,@Nomenclatura = 'TA'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '1'
+		,@RolMenosPrioritarioQueCarga = 'Operador Avanzado'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '0'
+		,@SeGeneranAutoSusSPsDeListados = '0'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Tareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeActores'
+		,@NombreAMostrar = 'Tipos de actores'
+		,@Nomenclatura = 'TDA'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeActores - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeArchivos'
+		,@NombreAMostrar = 'Tipos de archivos'
+		,@Nomenclatura = 'TDARCH'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeContactos'
+		,@NombreAMostrar = 'Tipos de contactos'
+		,@Nomenclatura = 'TDC'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeContactos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeLogLogins'
+		,@NombreAMostrar = 'Tipos de logs de los logins'
+		,@Nomenclatura = 'TDLL'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeLogLogins - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeOperaciones'
+		,@NombreAMostrar = 'Tipos de operaciones'
+		,@Nomenclatura = 'TDO'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeOperaciones - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'TiposDeTareas'
+		,@NombreAMostrar = 'Tipos de tareas'
+		,@Nomenclatura = 'TDT'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '1'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeTareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Ubicaciones'
+		,@NombreAMostrar = 'Ubicaciones'
+		,@Nomenclatura = 'UB'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '0'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Ubicaciones - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGenericoCSSId
+		,@Nombre = 'Unidades'
+		,@NombreAMostrar = 'Unidades'
+		,@Nomenclatura = 'UD'
+		,@Observaciones	= ''
+		,@LlevaActivo = '0'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '0'
+		,@RolMenosPrioritarioQueCarga = 'Master Admin'
+		,@RolMenosPrioritarioQueOpera = 'Master Admin'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Master Admin'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Master Admin'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Unidades - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+	
+	
+	EXEC [dbo].[usp_Tablas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@IconoCSSId = @IconoGrupoCSSId
+		,@Nombre = 'Usuarios'
+		,@NombreAMostrar = 'Usuarios'
+		,@Nomenclatura = 'U'
+		,@Observaciones	= ''
+		,@LlevaActivo = '1'
+		,@PermiteEliminar = '0'
+		,@TablaDeCore = '1'
+		,@SeCreanPaginas = '1'
+		,@TieneArchivos = '1'
+		,@RolMenosPrioritarioQueCarga = 'Administrador'
+		,@RolMenosPrioritarioQueOpera = 'Administrador'
+		,@RolMenosPrioritarioQueVerRegAnulados = 'Administrador'
+		,@RolMenosPrioritarioQueAccionesEspeciales = 'Administrador'
+		,@CampoAMostrarEnFK	= 'Nombre'
+		,@CampoQuePuedeSerIdString = ''
+		,@CamposAExcluirEnElInsert = ''
+		,@CamposAExcluirEnElUpdate = ''
+		,@PermiteInsertAnonimamente	= '0'
+		,@PermiteListarDDLAnonimamente	= '0'
+		,@SeGeneranAutoSusSPsDeABM = '0'
+		,@SeGeneranAutoSusSPsDeRegistros = '1'
+		,@SeGeneranAutoSusSPsDeListados = '1'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Usuarios - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada	
+		
+		
+	SELECT * FROM Tablas
+	SELECT * FROM Paginas
+	SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas
+-- INSERT VALUES: Tablas - FIN
+
+
+
+
+-- INSERT VALUES: PrioridadesDeSoportes - INICIO
+	PRINT 'Insertando PrioridadesDeSoportes'
+	INSERT INTO PrioridadesDeSoportes (id, Orden, Nombre, Observaciones) VALUES ('1', '100', 'Alta', '')
+	INSERT INTO PrioridadesDeSoportes (id, Orden, Nombre, Observaciones) VALUES ('2', '50', 'Media', '')
+	INSERT INTO PrioridadesDeSoportes (id, Orden, Nombre, Observaciones) VALUES ('3', '10', 'Baja', '')
+	SELECT * FROM PrioridadesDeSoportes
+-- INSERT VALUES: PrioridadesDeSoportes - FIN
+
+
+
+
+-- INSERT VALUES RelAsig_CuentasDeEnvios_A_Tablas: - INICIO  (Necesitaba 1ero las Tablas)
+	PRINT 'Insertando RelAsig_CuentasDeEnvios_A_Tablas'
+	DECLARE @TablaDeTareasId AS INT = (SELECT id FROM Tablas WHERE Nombre = 'Tablas')
+	
+	INSERT INTO RelAsig_CuentasDeEnvios_A_Tablas (ContextoId, CuentaDeEnvioId, TablaId) VALUES ('2', '1', @TablaDeTareasId)
+	SELECT * FROM RelAsig_CuentasDeEnvios_A_Tablas
+---- INSERT VALUES RelAsig_CuentasDeEnvios_A_Tablas: - FIN
+
+
+
+-- INSERT VALUES: Subsistemas - INICIO
+	PRINT 'Insertando Subsistemas'
+	INSERT INTO Subsistemas (Nombre, Observaciones) VALUES ('Sitio Web', '')
+	INSERT INTO Subsistemas (Nombre, Observaciones) VALUES ('Base de Datos', '')
+	INSERT INTO Subsistemas (Nombre, Observaciones) VALUES ('Servicio Web', '')
+	INSERT INTO Subsistemas (Nombre, Observaciones) VALUES ('Aplicación en Teléfonos', '')
+	SELECT * FROM Subsistemas
+-- INSERT VALUES: Subsistemas - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeArchivos - INICIO
+	PRINT 'Insertando TiposDeArchivos' -- ACÁ INSERTAMOS SOLO EL DEFAULT, EL RESTO VA EN SCRIPT POSTERIOR
+	-- No se define a nivel de formato (PDF, Excel, Word, etc), si no a nivel de tipo (Cad, office, Imágen, etc).
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('-Sin Indicar-', 'Tipo de archivo no indicado.') --id=1
+	SELECT * FROM TiposDeArchivos
+-- INSERT VALUES: TiposDeArchivos - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeLogLogins - INICIO
+	PRINT 'Insertando TiposDeLogLogins'
+	-- Dejar el MensajeDeError "vacío" fara los Login Exitosos, o indicar en él, el mesaje del Login Fallido.
+	-- Para los fallidos tomo el digito del Exitoso (respecto a con UserName, Con Cookie o con sesion, y le agrego uno atrás, 
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('10', '0', 'Exitoso: Con UserName@Contexto', '', 'Se logueó con Usuario y Contexto')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('11', '0',  'Fallido: @UsuarioQueEjecutaId <> 1', 'Error en el Login: Usuario inválido para realizar esta tarea.', 'El Login se realiza mediante el Usuario de Sistema')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('12', '0',  'Fallido: Usuario Erroneo', 'Error en el Login: Revise los datos ingresados e intente nuevamente.', 'Los datos ingresados dan por resultado un SELECT nulo')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('13', '0',  'Fallido: Contexto de sistemas', 'Error en el Login: No se permite operar sobre el Contexto indicado.', 'Es el contexto de sistema id=1 que no se puede operar sobre el.')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('14', '0',  'Fallido: Usuario NO Activo', 'Error en el Login: El usuario no se encuentra activo. Llame al administrador del sistema.', 'Usuario identificado, pwd correcto, pero Activo = 0')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('15', '0',  'Fallido: Pwd incorrecto', 'Error en el Login: Revise los datos ingresados e intente nuevamente.', 'Usuario identificado, pero el pwd es incorrecto, PERO NO LE DAREMOS EL MENSAJE CORRECTO, POR SI ES ALGUIEN QUE QUIERE HACKEAR')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('19', '0',  'Usuario Bloqueado x Multiples Fallidos c/U+C', 'Usuario bloqueado x 5 intentos fallidos. Espere 5 minutos para volver a intentarlo.', 'Realizó multiples intentos fallidos de login. Posible intento de Hacking o tratar de averiguar la contraseña de un usuario')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('20', '1',  'Exitoso: Con Cookie', '', 'Se logueó con la cookie')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('21', '1',  'Fallido: c/Cookie y @UsuarioQueEjecutaId <> 1', 'Error en el Login: Usuario inválido para realizar esta tarea.', 'El Login se realiza mediante el Usuario de Sistema')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('22', '1',  'Fallido: Cookie incorrecta', 'Error en el Login: Ingrese los datos nuevamente.', 'La cookie no coincide con ningun usuario, PERO NO LE DAREMOS EL MENSAJE CORRECTO, POR SI ES ALGUIEN QUE QUIERE HACKEAR')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('23', '1',  'Fallido: c/Cookie y Contexto de sistemas', 'Error en el Login: No se permite operar sobre el Contexto indicado.', 'Es el contexto de sistema id=1 que no se puede operar sobre el.')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('24', '1',  'Fallido: c/Cookie y Usuario NO Activo', 'Error en el Login: El usuario no se encuentra activo. Llame al administrador del sistema.', 'Usuario identificado, Cookie correcta, pero Activo = 0')
+	INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('29', '1',  'Usuario Bloqueado x Multiples Fallidos c/Cookie', 'Usuario bloqueado x 5 intentos fallidos. Espere 5 minutos para volver a intentarlo.', 'Realizó multiples intentos fallidos de login. Posible intento de Hacking o tratar de averiguar la contraseña de un usuario')
+	--INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('30', '0',  'Exitoso: Con Sesion', '', 'Se logueó con sesion del IIS')
+	--INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('31', NULL,  'Fallido: @UsuarioQueEjecutaId <> 1', ' ', 'El Login se realiza mediante el Usuario de Sistema')
+	--INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('34', NULL,  'Fallido: Usuario NO Activo', 'Usuario identificado, Sesion correcta, pero Activo = 0')
+	--INSERT INTO TiposDeLogLogins (id, ConCookie, Nombre, MensajeDeError, Observaciones) VALUES ('35', NULL,  'Fallido: Contexto de sistemas', 'Es el contexto de sistema id=1 que no se puede operar sobre el.')
+	SELECT * FROM TiposDeLogLogins
+-- INSERT VALUES: TiposDeLogLogins - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeTareas - INICIO
+	-- Insertamos un par p/los testeos, luego las carga cada Admin dentro de su contexto.
+	EXEC [dbo].[usp_TiposDeTareas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Tipo de Tarea A'
+		,@Observaciones	= 'Es para testear. Obs A.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeTareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+		
+	EXEC [dbo].[usp_TiposDeTareas__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Tipo de Tarea B'
+		,@Observaciones	= 'Es para testear. Obs B.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla TiposDeTareas - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+-- INSERT VALUES: TiposDeTareas - FIN
+
+
+
+
+-- INSERT VALUES: Ubicaciones - INICIO
+	PRINT 'Insertando Ubicaciones'
+	INSERT INTO Ubicaciones (Nombre, Observaciones, UbicacionAbsoluta) VALUES ('Intranet/__Contenidos/Contextos/', 'Es el root de todo', 0) -- id=1: Root del sitio
+	SELECT * FROM Ubicaciones
+-- INSERT VALUES: Ubicaciones - FIN
+
+
+
+
+
+-- INSERT VALUES: Iconos - INICIO (Necesita las Tablas Insertadas) // Inserto acá solo el Default
+	PRINT 'Insertando Iconos'
+
+	--id=1:
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Default'
+		,@Imagen = 'default.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo por defecto para todos los no reconocidos o indicados.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+		
+		
+	SELECT * FROM Iconos 
+-- INSERT VALUES: Iconos - FIN
+
+
+
+
+-- INSERT VALUES: ExtensionesDeArchivos - INICIO
+	DECLARE @IconoId INT, @TipoDeArchivoId INT
+
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Word')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'doc'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Word X')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'docx'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Excel')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Cálculo')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'xls'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Excel')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Cálculo')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'xlsx'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Pdf')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento No Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'pdf'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Jpg')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Imágen')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Jpg'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SELECT * FROM ExtensionesDeArchivos
+-- INSERT VALUES: ExtensionesDeArchivos - FIN
+
+
+
+
+-- ---------------------------
+-- INSERT VALUES DEL SISTEMA: - Fin de la creacion
+-- =====================================================

@@ -1,0 +1,386 @@
+-- =====================================================
+-- Autor: Departamento de Sistemas - #EMPRESA#
+-- Creado en la fecha: Feb 21 2019 10:58AM
+-- Nombre del Script: DB_XXX__12b_Core__Registros Particulares.sql
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- SP: STORE PROCEDURES // DB_XXX__12b_Core__Registros Particulares // INICIO
+-- -------------------------
+ 
+ 
+		-- Tablas Involucradas: - INICIO
+			-- Archivos
+			-- ExtensionesDeArchivos__id_by_@nombre
+			-- LoginDeDispositivos__Campos_by_@Token
+			-- Publicaciones
+			-- Soportes
+			-- Tareas
+		-- Tablas Involucradas: - FIN
+
+
+
+
+-- SP-TABLA: Archivos - INICIO
+IF (OBJECT_ID('usp_Archivos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Archivos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Archivos__Registro_by_@id
+		@UsuarioQueEjecutaId		INT
+		,@FechaDeEjecucion			DATETIME
+		,@id						INT	
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = (SELECT Nombre FROM Tablas T INNER JOIN Archivos A ON T.id = A.TablaId WHERE A.id = @id) -- No la indicamos directamente, si no que se busca del registro que se pasa.
+			,@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Los permisos no se evalúan contra la tabla "Archivos", si no contra la tabla: @Tabla --> Contra el Registro "Padre"
+		DECLARE @RegistroPadreId INT = (SELECT RegistroId FROM Archivos WHERE id = @id)
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @RegistroPadreId, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		SET @Tabla = 'Archivos' -- Hago esto para mantener compatibilidad con las funciones genericas q se utilizan a continuación con @Tabla.
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Historia	VARCHAR(1000) -- VER SI VA
+				EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+								
+				DECLARE @TablaId INT = (SELECT TablaId FROM Archivos WHERE id = @id)
+				DECLARE @UbicacionRelativaCompleta VARCHAR(100)
+				EXEC @UbicacionRelativaCompleta = ufc_UbicacionRelativaCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @TablaId = @TablaId
+	    
+				DECLARE @UbicacionDeIconos VARCHAR(100)
+				EXEC @UbicacionDeIconos = ufc_UbicacionRelativaDeIconos
+	    
+	    		SELECT 	A.id
+						,T.Nombre AS Tabla
+						,@UbicacionRelativaCompleta + '/' + A.NombreFisicoCompleto AS NombreFisicoCompleto
+						,A.NombreAMostrar
+						,@UbicacionRelativaCompleta AS UbicacionRelativaCompleta
+						,A.ExtensionDeArchivoId
+						,A.Orden -- Si un registro tiene + de 1 Archivo --> Este campo los "ordena".
+						--,Codigo
+						,@UbicacionDeIconos + '/' + ICO.Imagen AS Icono
+						,A.Observaciones
+						--,A.Activo
+						,@Historia AS Historia
+				FROM Archivos A
+					INNER JOIN ExtensionesDeArchivos EXTDA ON EXTDA.id = A.ExtensionDeArchivoId
+					INNER JOIN Iconos ICO ON ICO.id = EXTDA.IconoId
+					INNER JOIN Tablas T ON T.id = A.TablaId
+				WHERE A.id = @id
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Archivos - FIN
+
+
+
+
+-- SP-TABLA: ExtensionesDeArchivos - INICIO
+IF (OBJECT_ID('usp_ExtensionesDeArchivos__id_by_@nombre') IS NOT NULL) DROP PROCEDURE usp_ExtensionesDeArchivos__id_by_@nombre
+GO
+CREATE PROCEDURE usp_ExtensionesDeArchivos__id_by_@nombre
+		@UsuarioQueEjecutaId		INT
+		,@FechaDeEjecucion			DATETIME
+		
+		,@Nombre					VARCHAR(8)
+		
+		,@id						INT	OUTPUT
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'ExtensionesDeArchivos'
+			,@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			
+		-- Esta tabla la podría llegar a utilizar cualquier usuario --> no valido nada.
+		
+		--EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		--IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+		--	BEGIN
+		--		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		--	END
+
+		--IF @sResSQL = ''
+		--	BEGIN
+			
+		SET @sResSQL = ''
+		
+		SELECT @id = id FROM ExtensionesDeArchivos WHERE Nombre = LOWER(@Nombre)
+				
+		IF (@id IS NULL)
+			BEGIN -- La inserto, y me devuelve el id
+				EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+					,@Nombre = @Nombre
+					,@IconoId = '1' -- El q es by default
+					,@TipoDeArchivoId = '1' -- Default: "-Sin indicar-"
+					,@ProgramaAsociado = ''
+					,@Observaciones	= ''
+					,@sResSQL = @sResSQL OUTPUT
+					,@id = @id OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: ExtensionesDeArchivos - FIN
+
+
+
+-- SP-TABLA: LoginDeDispositivos - FIN
+IF (OBJECT_ID('usp_LoginDeDispositivos__Campos_by_@Token') IS NOT NULL) DROP PROCEDURE usp_LoginDeDispositivos__Campos_by_@Token
+GO
+CREATE PROCEDURE usp_LoginDeDispositivos__Campos_by_@Token
+		@Token						VARCHAR(50)
+		,@sResSQL					VARCHAR(1000)			OUTPUT 
+		,@UsuarioQueEjecutaId		INT
+	AS
+	BEGIN
+		SELECT LD.Token
+			,LD.UsuarioId
+			,LD.DispositivoId
+			,LD.InicioValides
+			,LD.FinValidez
+			,D.MachineName
+		FROM LoginDeDispositivos LD
+			INNER JOIN Dispositivos D ON D.id = LD.DispositivoId
+		WHERE		
+			(LD.Token =  @Token )
+		SET @sResSQL = ''
+	END
+GO
+-- SP-TABLA: LoginDeDispositivos - FIN
+
+
+
+
+-- SP-TABLA: Publicaciones - INICIO
+IF (OBJECT_ID('usp_Publicaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Publicaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Publicaciones__Registro_by_@id
+		@UsuarioQueEjecutaId		INT
+		,@FechaDeEjecucion			DATETIME
+		,@id						INT	
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Publicaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Historia	VARCHAR(1000)
+				EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+				
+				SELECT 	PUB.id
+					,dbo.ufc_FormatoFecha(PUB.Fecha) AS Fecha
+					,CAST(PUB.Hora AS CHAR(5)) AS Hora
+					,PUB.Titulo
+					,PUB.NumeroDeVersion
+					,PUB.Realizada
+					,PUB.Observaciones
+					,COALESCE(STUFF((SELECT ', ' + 'Nº ' + CAST(SOP.Numero AS VARCHAR)
+						FROM Soportes SOP
+						WHERE SOP.PublicacionId = PUB.id FOR XML PATH('')),1,1,''), '-') AS Soportess
+					,COALESCE(STUFF((SELECT ', ' + SS.Nombre
+						FROM RelAsig_Subsistemas_A_Publicaciones RASaP
+							INNER JOIN SubSistemas SS ON RASaP.SubsistemaId = SS.id
+						WHERE RASaP.PublicacionId = PUB.id FOR XML PATH('')),1,1,''), '-') AS SubSistemas
+					--,PUB.ContextoId
+					--,CONT.Nombre AS Contexto
+					,@Historia AS Historia
+				FROM Publicaciones PUB
+				WHERE PUB.id = @id
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Publicaciones - FIN
+
+
+
+
+-- SP-TABLA: Soportes - INICIO
+IF (OBJECT_ID('usp_Soportes__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Soportes__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Soportes__Registro_by_@id
+		@UsuarioQueEjecutaId		INT
+		,@FechaDeEjecucion			DATETIME
+		,@id						INT	
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+			,@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Historia	VARCHAR(1000)
+				EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+				
+				DECLARE @TablaId INT =(SELECT id FROM Tablas WHERE Nombre = @Tabla)
+												
+				SELECT 	SOP.id
+					,UCREO.UserName AS UsuarioQueEjecuta
+					,UCREO.Email AS EmailUsuarioQueCreo
+					,USOL.Id AS UsuarioQueSolicitaId
+					,USOL.UserName AS UsuarioQueSolicita
+					,USOL.Email AS EmailUsuarioQueSolicito
+					,SOP.FechaDeEjecucion
+					,UCERRO.Id AS UsuarioQueCerroId
+					,UCERRO.UserName AS UsuarioQueCerro
+					,SOP.Numero
+					,SOP.FechaDeCierre
+					,SOP.Texto
+					,SOP.EstadoDeSoportesId AS EstadoDeSoporteId
+					,EDS.Nombre AS EstadoDeSoportes
+					,EDS.Observaciones AS ObservacionesDeEstadoDeSoportes
+					,SOP.PrioridadDeSoporteId
+					,PRIO.Nombre AS Prioridad
+					,SOP.Observaciones
+					,SOP.ObservacionesPrivadas
+					,SOP.Cerrado
+					,SOP.Activo
+					,LREG.FechaDeEjecucion
+					,N'images/cbx/imgRealizado_' + CONVERT(VARCHAR(5), SOP.Cerrado) + N'.png' AS img_Cerrado
+					,REPLACE(REPLACE(SOP.Cerrado, '1', 'Pedido Cerrado'), '0', 'Pedido Pendiente') AS TextoCerrado
+					,@Historia AS Historia
+				FROM Soportes SOP
+					INNER JOIN LogRegistros LREG ON LREG.TablaId = @TablaId AND LREG.RegistroId = SOP.id AND LREG.TipoDeOperacionId = 2 -- 2:CREADO
+					INNER JOIN Usuarios UCREO ON LREG.UsuarioQueEjecutaId = UCREO.id
+					INNER JOIN Usuarios USOL ON SOP.UsuarioQueSolicitaId = USOL.id
+					LEFT JOIN Usuarios UCERRO ON SOP.UsuarioQueCerroId = UCERRO.id -- Por NULLs
+					INNER JOIN PrioridadesDeSoportes PRIO ON SOP.PrioridadDeSoporteId = PRIO.id
+					INNER JOIN EstadosDeSoportes EDS ON SOP.EstadoDeSoportesId = EDS.id
+				WHERE (SOP.id = @id) --AND (SOP.FechaDeCierre IS NOT NULL)
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Soportes - FIN
+
+
+
+
+-- SP-TABLA: Tareas - INICIO
+IF (OBJECT_ID('usp_Tareas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Tareas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Tareas__Registro_by_@id
+		@UsuarioQueEjecutaId		INT
+		,@FechaDeEjecucion			DATETIME
+		,@id						INT	
+	    ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+    	DECLARE @Tabla VARCHAR(80) = 'Tareas'
+			,@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Historia	VARCHAR(1000)
+				EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+				
+				SELECT TA.id
+					,TA.ContextoId
+					,UI.Apellido + ', ' + UI.Nombre AS UsuarioOriginante
+					,TA.UsuarioOriginanteId
+					,UD.Apellido + ', ' + UD.Nombre AS UsuarioDestinatario
+					,TA.UsuarioDestinatarioId
+					,TA.FechaDeInicio
+					,TA.FechaLimite
+					,TA.Numero
+					,TDT.Nombre AS TipoDeTarea
+					,TA.TipoDeTareaId
+					,EDT.Nombre AS EstadoDeTarea
+					,TA.EstadoDeTareaId
+					,TA.Titulo
+					,IDT.Nombre AS ImportanciaDeTarea
+					,TA.ImportanciaDeTareaId
+					,CASE	WHEN T.id = 1 THEN 'La tarea no hace referencia a ningún registro.'
+							ELSE 'La tarea hace referencia al registro del módulo "' + T.NombreAMostrar + '" - id=' + CAST(RegistroId AS VARCHAR) + '.  '
+							END AS RegistroDeReferencia
+					,T.Nombre AS TablaDeReferencia
+					,TA.RegistroId
+					,TA.Observaciones
+					,TA.Activo
+					,@Historia AS Historia
+				FROM Tareas TA
+					INNER JOIN Usuarios UI ON TA.UsuarioOriginanteId = UI.id
+					INNER JOIN Usuarios UD ON TA.UsuarioDestinatarioId = UD.id
+					INNER JOIN TiposDeTareas TDT ON TA.TipoDeTareaId = TDT.id
+					INNER JOIN EstadosDeTareas EDT ON TA.EstadoDeTareaId = EDT.id
+					INNER JOIN ImportanciasDeTareas IDT ON TA.ImportanciaDeTareaId = IDT.id
+					INNER JOIN Tablas T ON TA.TablaId = T.id
+				WHERE TA.id = @id
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Tareas - FIN
+
+
+
+
+-- ---------------------------------
+-- SP: STORE PROCEDURES // DB_XXX__12b_Core__Registros Particulares // FIN
+-- =====================================================

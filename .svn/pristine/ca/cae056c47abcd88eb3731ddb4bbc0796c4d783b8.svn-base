@@ -1,0 +1,1339 @@
+-- =====================================================
+-- Descripción: Funciones
+-- Script: DB_ParticularCore__C06__Funciones.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+		-- Areas Involucradas: - INICIO
+				-- Aritmeticas
+				-- Cifrado
+				-- Contextos
+				-- DDLs
+				-- Fechas
+				-- HTML
+				-- Secciones
+				-- Strings
+				-- SPs
+				-- Registros
+				-- RolesDeUsuarios
+				-- Ubicaciones
+				-- Usuarios
+		-- Areas Involucradas: - FIN
+
+
+-- Aritmeticas /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Aritmeticas__GetTRUE_SiEsMayorQueUNO') IS NOT NULL) DROP FUNCTION ufc_Aritmeticas__GetTRUE_SiEsMayorQueUNO
+GO
+CREATE FUNCTION ufc_Aritmeticas__GetTRUE_SiEsMayorQueUNO
+	(@id INT)
+	
+RETURNS BIT
+	
+AS
+BEGIN
+	DECLARE @sResSQL AS BIT
+	IF @id > 1
+		BEGIN
+			SET @sResSQL = 0				
+		END
+	ELSE
+		BEGIN
+			SET @sResSQL = 1
+		END
+	--ENDIF
+	
+	RETURN @sResSQL
+END
+GO
+-- Aritmeticas /Funciones/ - FIN
+
+
+
+
+-- Cifrado /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Cifrado__GenerarMD5') IS NOT NULL) DROP FUNCTION ufc_Cifrado__GenerarMD5
+GO
+CREATE FUNCTION ufc_Cifrado__GenerarMD5
+	(
+		@Pwd		VARCHAR(100)
+	)
+RETURNS VARCHAR(40)
+AS
+BEGIN
+	RETURN SUBSTRING(master.dbo.fn_varbintohexstr(HashBytes('MD5', @Pwd)), 3, 40)
+END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Cifrado__GenerarSHA') IS NOT NULL) DROP FUNCTION ufc_Cifrado__GenerarSHA
+GO
+CREATE FUNCTION ufc_Cifrado__GenerarSHA
+	(
+		@Pwd		VARCHAR(100)
+	)
+RETURNS VARCHAR(40)
+AS
+BEGIN
+	RETURN SUBSTRING(master.dbo.fn_varbintohexstr(HashBytes('SHA', @Pwd)), 3, 40)
+END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Cifrado__GenerarSHA1') IS NOT NULL) DROP FUNCTION ufc_Cifrado__GenerarSHA1
+GO
+CREATE FUNCTION ufc_Cifrado__GenerarSHA1
+	(
+		@Pwd		VARCHAR(100)
+	)
+RETURNS VARCHAR(40)
+AS
+BEGIN
+	RETURN SUBSTRING(master.dbo.fn_varbintohexstr(HashBytes('SHA1', @Pwd)), 3, 40)
+END
+GO
+-- Cifrado /Funciones/ - FIN
+
+
+
+
+-- Contextos /Funciones/ - INICIO // 1ero va el de Contexto
+IF (OBJECT_ID('ufc_Contextos__ContextoId') IS NOT NULL) DROP FUNCTION ufc_Contextos__ContextoId
+GO
+CREATE FUNCTION ufc_Contextos__ContextoId
+	(
+		@UsuarioId				INT
+		,@Seccion				VARCHAR(30)
+		,@CodigoDelContexto		VARCHAR(40)
+	)
+RETURNS INT
+AS
+BEGIN
+	DECLARE @ContextoId INT 
+		,@Seccion_Web VARCHAR(30)
+		
+	EXEC @Seccion_Web = ufc_Secciones__Web
+	
+	-- Anteriormente a llamar a esta funcion ya están validados todos los datos en el AutorizadoA (Usuario, Seccion, CodigoDelContexto): --> no es necesario validar nada acá.
+	IF @UsuarioId = '1'
+		BEGIN
+			IF @Seccion = @Seccion_Web -- Para realizar esta consulta el @UsuarioQueEjecutaId debe ser el que no se puede operar Y la Seccion = 'Web'
+				BEGIN
+					SET @ContextoId = (SELECT id FROM Contextos WHERE Codigo = @CodigoDelContexto)
+				END
+		END
+	ELSE -- Es un usuario válido para operar, solo resta saber cual es su contexto.
+		BEGIN
+			SET @ContextoId = (SELECT C.id FROM Contextos C
+												INNER JOIN Usuarios U ON U.ContextoId = C.id
+											WHERE U.id = @UsuarioId)
+		END
+		
+	RETURN COALESCE(@ContextoId,  NULL, 0) -- No puede devolver nulo por que da error el SP.
+END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Contextos__CodigoDelContexto') IS NOT NULL) DROP FUNCTION ufc_Contextos__CodigoDelContexto
+GO
+CREATE FUNCTION ufc_Contextos__CodigoDelContexto
+	(
+		@UsuarioId				INT
+	)
+RETURNS VARCHAR(40)
+AS
+BEGIN
+	DECLARE @Codigo VARCHAR(40) = (SELECT C.Codigo 
+									FROM Usuarios U 
+										INNER JOIN Contextos C ON U.ContextoId = C.id
+									WHERE U.id = @UsuarioId
+								)
+	RETURN @Codigo
+END
+GO
+-- Contextos /Funciones/ - FIN
+
+
+
+
+-- DDLs /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_DDLs__Adds') IS NOT NULL) DROP FUNCTION ufc_DDLs__Adds
+GO
+CREATE FUNCTION ufc_DDLs__Adds
+	--	@Formato_Listado =0	: Rearmar 'Seleccionar'
+		--		 =1	: "Tabla Entera"
+		--		 =2	: "Sin el 0"
+		--		 =-1: Con 'Todos' Sin 'Seleccionar'
+		--		 =-2: Rearmar 'Seleccionar' y ADD 'Todos'
+		--		 =-3: Rearmar 'Seleccionar' ID=-2
+	(@Formato_Listado INT)
+	
+	RETURNS @IDs TABLE
+		(
+			id			INT
+			,Codigo		VARCHAR(2)
+			,Data		VARCHAR(50)
+		)
+AS
+BEGIN
+	IF @Formato_Listado = '-2'
+		BEGIN
+			INSERT @IDs
+			SELECT	 '0' AS id
+					,'0' AS Codigo
+					,' - Seleccionar - ' AS Data
+					
+			UNION
+			
+			SELECT	 '-1' AS id
+					,'-1' AS Codigo
+					,' - Todos - ' AS Data
+		END
+	ELSE
+		IF @Formato_Listado = '-1'
+			BEGIN
+				INSERT @IDs
+				SELECT	 '-1' AS id
+						,'-1' AS Codigo
+						,' - Todos - ' AS Data
+			END
+		ELSE
+			IF @Formato_Listado = '0'
+				BEGIN
+					INSERT @IDs
+					SELECT	 '0' AS id
+							,'0' AS Codigo
+							,' - Seleccionar - ' AS Data
+				END
+			ELSE
+				IF @Formato_Listado = '-3'
+					BEGIN
+						INSERT @IDs
+						SELECT	 '-2' AS id
+								,'-2' AS Codigo
+								,' - Seleccionar - ' AS Data
+					END
+				ELSE
+					IF @Formato_Listado = '3'
+						BEGIN
+							INSERT @IDs
+							SELECT	 '-1' AS id
+									,'-1' AS Codigo
+									,' - Todos - ' AS Data
+						END
+					ELSE
+						IF @Formato_Listado = '-4'
+							BEGIN
+								INSERT @IDs
+								SELECT	 '-2' AS id
+										,'-2' AS Codigo
+										,' - Todos - ' AS Data
+							END
+		--ENDIF
+	--ENDIF
+
+	RETURN
+
+END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_DDLs__MinimoId') IS NOT NULL) DROP FUNCTION ufc_DDLs__MinimoId
+GO
+CREATE FUNCTION ufc_DDLs__MinimoId
+	-- 	@Formato_Listado =0	: Rearmar 'Seleccionar'
+		--		 =1	: "Tabla Entera"
+		--		 =2	: "Sin el 0"
+		--		 =-1: Con 'Todos' Sin 'Seleccionar'
+		--		 =-2: Add 'Seleccionar' y 'Todos'
+
+	(@Formato_Listado INT)
+RETURNS INT
+
+AS
+	BEGIN
+		RETURN CASE
+			--WHEN @Formato_Listado = -1 THEN 1
+			--WHEN @Formato_Listado = -2 THEN 1
+			--WHEN @Formato_Listado = 0 THEN 1
+			--WHEN @Formato_Listado = 1 THEN 0
+			--WHEN @Formato_Listado = 2 THEN 1
+			--ELSE 0
+			WHEN @Formato_Listado = 1 OR @Formato_Listado = -3 OR @Formato_Listado = 3  THEN 0
+			ELSE	1
+	END
+END
+GO
+-- DDLs /Funciones/ - FIN
+
+
+
+
+-- Fechas /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Fechas__FormatoFechaComoTexto') IS NOT NULL) DROP FUNCTION ufc_Fechas__FormatoFechaComoTexto
+GO
+CREATE FUNCTION ufc_Fechas__FormatoFechaComoTexto
+	(
+		@FechaYHora				DATETIME
+	)
+	RETURNS VARCHAR(30)
+	AS
+	BEGIN
+		DECLARE @FechaComoTexto VARCHAR(30)
+			,@Tiempo AS TIME
+		--https://www.sqlshack.com/es/funciones-y-formatos-de-sql-convert-date/
+		
+		--Style 	How it’s displayed
+		--101 	mm/dd/yyyy
+		--102 	yyyy.mm.dd
+		--103 	dd/mm/yyyy
+		--104 	dd.mm.yyyy
+		--105 	dd-mm-yyyy
+		--110 	mm-dd-yyyy
+		--111 	yyyy/mm/dd
+		--106 	dd mon yyyy
+		--107 	Mon dd, yyyy
+		
+		SET @FechaComoTexto = CONVERT(VARCHAR(10), @FechaYHora, 103) -- Solo DATE
+		
+		SET @Tiempo = @FechaYHora -- Me quedo solo con el tiempo
+		
+		IF @Tiempo > '00:00:00.0000000' -- Entonces es Fecha y Hora:
+			BEGIN
+				SET @FechaComoTexto = @FechaComoTexto + ' - ' + CONVERT(VARCHAR(5), @Tiempo) -- Es DATETIME
+			END
+			
+		RETURN @FechaComoTexto --@FechaComoTexto
+	END
+GO
+
+
+
+
+--IF (OBJECT_ID('ufc_Fechas__FormatoFechaYHoraComoTexto') IS NOT NULL) DROP FUNCTION ufc_Fechas__FormatoFechaYHoraComoTexto
+--GO
+--CREATE FUNCTION ufc_Fechas__FormatoFechaYHoraComoTexto
+--	(
+--		@Fecha				DATETIME
+--	)
+--	RETURNS VARCHAR(30) --22
+--	AS
+--	BEGIN
+--		--https://www.sqlshack.com/es/funciones-y-formatos-de-sql-convert-date/
+		
+--		RETURN CONVERT(VARCHAR(10), @Fecha, 103) + ' - ' + RIGHT(CONVERT(VARCHAR(32),@Fecha,108),8)
+		
+--		--RETURN CONVERT(VARCHAR(10), @Fecha, 103) + ' - ' + RIGHT(CONVERT(VARCHAR(32),@Fecha,108),5)
+		
+--		--RETURN LEFT(DATENAME(WEEKDAY,@Fecha),3) + ' ' + CONVERT(VARCHAR(10),@Fecha,105)
+--	END
+--GO
+-- Fechas /Funciones/ - FIN
+
+
+
+
+-- HTML /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_HTML__ConvertirAVarchar') IS NOT NULL) DROP FUNCTION ufc_HTML__ConvertirAVarchar
+GO
+CREATE FUNCTION ufc_HTML__ConvertirAVarchar
+	(
+		@TextoHTML VARCHAR (MAX)
+	)
+	RETURNS VARCHAR(MAX) AS
+	
+	BEGIN 
+	IF @TextoHTML IS NOT NULL
+		BEGIN
+			DECLARE @Inicio INT
+			DECLARE @Fin INT
+			DECLARE @Largo INT
+			SET @Inicio = CHARINDEX('<',@TextoHTML)
+			SET @Fin = CHARINDEX('>',@TextoHTML,CHARINDEX('<',@TextoHTML))
+			SET @Largo = (@Fin - @Inicio) + 1
+			WHILE @Inicio > 0 AND @Fin > 0 AND @Largo > 0
+			
+			BEGIN -- SE QUITAN LOS TAGS
+				SET @TextoHTML = STUFF(@TextoHTML,@Inicio,@Largo,'')
+				SET @Inicio = CHARINDEX('<',@TextoHTML)
+				SET @Fin = CHARINDEX('>',@TextoHTML,CHARINDEX('<',@TextoHTML))
+				SET @Largo = (@Fin - @Inicio) + 1
+			END
+		END
+	   
+	   IF @TextoHTML IS NOT NULL
+			BEGIN   -- SE MODIFICAN LETRAS CON ACENTO
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Aacute;' COLLATE Latin1_General_CS_AS) , 'Á')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&aacute;' COLLATE Latin1_General_CS_AS) , 'á')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Eacute;' COLLATE Latin1_General_CS_AS) , 'É')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&eacute;' COLLATE Latin1_General_CS_AS) , 'é')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Iacute;' COLLATE Latin1_General_CS_AS) , 'Í')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&iacute;' COLLATE Latin1_General_CS_AS) , 'í')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Oacute;' COLLATE Latin1_General_CS_AS) , 'Ó')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&oacute;' COLLATE Latin1_General_CS_AS) , 'ó')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Uacute;' COLLATE Latin1_General_CS_AS) , 'Ú')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&uacute;' COLLATE Latin1_General_CS_AS), 'ú')
+			  SELECT @TextoHTML =  replace (@TextoHTML, 'o&nbsp;' , '')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&nbsp;' , '')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&ldquo;' , '"')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&rdquo;' , '"')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&iquest;' , '¿')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&ordm;' , '°')		  
+			  
+			END	
+			RETURN @TextoHTML		      
+	END
+GO
+-- HTML /Funciones/ - FIN
+
+
+
+
+-- Registros /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Registros__ValorSiguiente') IS NOT NULL) DROP FUNCTION ufc_Registros__ValorSiguiente
+GO
+CREATE FUNCTION ufc_Registros__ValorSiguiente
+		(
+			@Tabla			VARCHAR(100)
+			,@Campo			NVARCHAR(100) = 'Numero' -- Opcional, campo por defecto
+			,@ContextoId	INT = '-1' -- Opcional, valor por defecto que omite el contexto
+		)
+		RETURNS INT
+	AS
+	BEGIN
+		DECLARE	@NumAnterior INT
+		DECLARE @SQLString NVARCHAR(1000)
+		DECLARE @ParmDefinition NVARCHAR(1000)
+		DECLARE @MaxOUT INT
+		
+		IF (@ContextoId	= '-1')
+			BEGIN
+				SET @SQLString = N'SELECT @MaxOUT = MAX(' + @Campo + ') FROM ' + @Tabla
+			END
+		ELSE
+			BEGIN
+				SET @SQLString = N'SELECT @MaxOUT = MAX(' + @Campo + ') FROM ' + @Tabla + ' WHERE ContextoId = ' + CAST(@ContextoId AS VARCHAR(MAX))
+			END
+		
+		SET @ParmDefinition = N'@MaxOUT INT OUTPUT'
+		EXECUTE sp_executesql @SQLString, @ParmDefinition, @MaxOUT = @MaxOUT OUTPUT
+		
+		IF @MaxOUT > 0  -- O sea, no es el 1ero
+			BEGIN       
+				SET @NumAnterior = @MaxOUT
+     		END
+		ELSE
+			BEGIN 
+				SET @NumAnterior = 0 --Es el primero 
+			END
+		
+		RETURN @NumAnterior + 1
+	END
+GO
+-- Registros /Funciones/ - FIN
+
+
+
+
+-- RolesDeUsuarios /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_RolesDeUsuarios__Administrador') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__Administrador
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__Administrador
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Administrador'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__AdministradorId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__AdministradorId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__AdministradorId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_Administrador VARCHAR(80)
+		EXEC @Roles_Administrador = ufc_RolesDeUsuarios__Administrador
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_Administrador)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__AdministrarSoportes') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__AdministrarSoportes
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__AdministrarSoportes
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Administrar Soportes'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__AdministrarSoportesId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__AdministrarSoportesId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__AdministrarSoportesId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_AdministrarSoportes VARCHAR(80)
+		EXEC @Roles_AdministrarSoportes = ufc_RolesDeUsuarios__AdministrarSoportes
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_AdministrarSoportes)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__MasterAdmin') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__MasterAdmin
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__MasterAdmin
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Master Admin'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__MasterAdminId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__MasterAdminId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__MasterAdminId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_MasterAdmin VARCHAR(80)
+		EXEC @Roles_MasterAdmin = ufc_RolesDeUsuarios__MasterAdmin
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_MasterAdmin)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__NotificarPorInformes') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__NotificarPorInformes
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__NotificarPorInformes
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Recibe notificaciones por modificaciones en informes'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__NotificarPorInformesId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__NotificarPorInformesId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__NotificarPorInformesId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_NotificarPorInformes VARCHAR(80)
+		EXEC @Roles_NotificarPorInformes = ufc_RolesDeUsuarios__NotificarPorInformes
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_NotificarPorInformes)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__NotificarPorUsuarios') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__NotificarPorUsuarios
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__NotificarPorUsuarios
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Recibe notificaciones por modificaciones en usuarios'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__NotificarPorUsuariosId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__NotificarPorUsuariosId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__NotificarPorUsuariosId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_NotificarPorUsuarios VARCHAR(80)
+		EXEC @Roles_NotificarPorUsuarios = ufc_RolesDeUsuarios__NotificarPorUsuarios
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_NotificarPorUsuarios)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__OperadorAvanzado') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__OperadorAvanzado
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__OperadorAvanzado
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Operador Avanzado'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__OperadorAvanzadoId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__OperadorAvanzadoId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__OperadorAvanzadoId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_OperadorAvanzado VARCHAR(80)
+		EXEC @Roles_OperadorAvanzado = ufc_RolesDeUsuarios__OperadorAvanzado
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_OperadorAvanzado)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__Operador') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__Operador
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__Operador
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Operador'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__OperadorId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__OperadorId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__OperadorId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_Operador VARCHAR(80)
+		EXEC @Roles_Operador = ufc_RolesDeUsuarios__Operador
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_Operador)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__PedirSoportes') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__PedirSoportes
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__PedirSoportes
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Pedir Soportes'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__PedirSoportesId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__PedirSoportesId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__PedirSoportesId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_PedirSoportes VARCHAR(80)
+		EXEC @Roles_PedirSoportes = ufc_RolesDeUsuarios__PedirSoportes
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_PedirSoportes)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__SoloLogin') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__SoloLogin
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__SoloLogin
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Solo Login'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__SoloLoginId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__SoloLoginId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__SoloLoginId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_SoloLogin VARCHAR(80)
+		EXEC @Roles_SoloLogin = ufc_RolesDeUsuarios__SoloLogin
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_SoloLogin)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__Supervisor') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__Supervisor
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__Supervisor
+	(
+	)
+	RETURNS VARCHAR(80)
+	AS
+	BEGIN
+		RETURN 'Supervisor'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_RolesDeUsuarios__SupervisorId') IS NOT NULL) DROP FUNCTION ufc_RolesDeUsuarios__SupervisorId
+GO
+CREATE FUNCTION ufc_RolesDeUsuarios__SupervisorId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Roles_Supervisor VARCHAR(80)
+		EXEC @Roles_Supervisor = ufc_RolesDeUsuarios__Supervisor
+		
+		RETURN (SELECT id FROM RolesDeUsuarios WHERE Nombre = @Roles_Supervisor)
+	END
+GO
+-- RolesDeUsuarios /Funciones/ - FIN
+
+
+
+
+-- Secciones /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Secciones__Administracion') IS NOT NULL) DROP FUNCTION ufc_Secciones__Administracion
+GO
+CREATE FUNCTION ufc_Secciones__Administracion
+	(
+	)
+	RETURNS VARCHAR(30)
+	AS
+	BEGIN
+		RETURN 'Administracion'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__AdministracionId') IS NOT NULL) DROP FUNCTION ufc_Secciones__AdministracionId
+GO
+CREATE FUNCTION ufc_Secciones__AdministracionId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Seccion_Administracion VARCHAR(30)
+		EXEC @Seccion_Administracion = ufc_Secciones__Administracion
+		
+		RETURN (SELECT id FROM Secciones WHERE Nombre = @Seccion_Administracion)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__Intranet') IS NOT NULL) DROP FUNCTION ufc_Secciones__Intranet
+GO
+CREATE FUNCTION ufc_Secciones__Intranet
+	(
+	)
+	RETURNS VARCHAR(30)
+	AS
+	BEGIN
+		RETURN 'Intranet'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__IntranetId') IS NOT NULL) DROP FUNCTION ufc_Secciones__IntranetId
+GO
+CREATE FUNCTION ufc_Secciones__IntranetId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Seccion_Intranet VARCHAR(30)
+		EXEC @Seccion_Intranet = ufc_Secciones__Intranet
+		
+		RETURN (SELECT id FROM Secciones WHERE Nombre = @Seccion_Intranet)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__Web') IS NOT NULL) DROP FUNCTION ufc_Secciones__Web
+GO
+CREATE FUNCTION ufc_Secciones__Web
+	(
+	)
+	RETURNS VARCHAR(30)
+	AS
+	BEGIN
+		RETURN 'Web'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__WebId') IS NOT NULL) DROP FUNCTION ufc_Secciones__WebId
+GO
+CREATE FUNCTION ufc_Secciones__WebId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Seccion_Web VARCHAR(30)
+		EXEC @Seccion_Web = ufc_Secciones__Web
+		
+		RETURN (SELECT id FROM Secciones WHERE Nombre = @Seccion_Web)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__PrivadaDelUsuario') IS NOT NULL) DROP FUNCTION ufc_Secciones__PrivadaDelUsuario
+GO
+CREATE FUNCTION ufc_Secciones__PrivadaDelUsuario
+	(
+	)
+	RETURNS VARCHAR(30)
+	AS
+	BEGIN
+		RETURN 'PrivadaDelUsuario'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Secciones__PrivadaDelUsuarioId') IS NOT NULL) DROP FUNCTION ufc_Secciones__PrivadaDelUsuarioId
+GO
+CREATE FUNCTION ufc_Secciones__PrivadaDelUsuarioId
+	(
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Seccion_PrivadaDelUsuario VARCHAR(30)
+		EXEC @Seccion_PrivadaDelUsuario = ufc_Secciones__PrivadaDelUsuario
+		
+		RETURN (SELECT id FROM Secciones WHERE Nombre = @Seccion_PrivadaDelUsuario)
+	END
+GO
+-- Secciones /Funciones/ - FIN
+
+
+
+
+-- Strings /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Strings__ConvertirATabla') IS NOT NULL) DROP FUNCTION ufc_Strings__ConvertirATabla
+GO
+CREATE FUNCTION ufc_Strings__ConvertirATabla
+	(
+	   @Lista      NVARCHAR(MAX)
+	   --,@Delimitador NVARCHAR(255) = ','
+	)
+RETURNS @Strings TABLE
+		(valor NVARCHAR(255))
+	AS
+	BEGIN
+		SET @Lista = REPLACE(@Lista, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@Lista) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @Lista)
+			--SET @Position = CHARINDEX(@Delimitador, @Lista)
+			IF @Position > 0
+				BEGIN
+					INSERT @Strings
+					SELECT LEFT(@Lista, @Position - 1)
+					SET @Lista = RIGHT(@Lista, LEN(@Lista) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @Strings
+					SELECT @Lista
+					SET @Lista = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Strings__ConvertirIdsString_ToTable_INT') IS NOT NULL) DROP FUNCTION ufc_Strings__ConvertirIdsString_ToTable_INT
+GO
+CREATE FUNCTION ufc_Strings__ConvertirIdsString_ToTable_INT
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @IDs TABLE
+		(id INT)
+	AS
+	BEGIN
+		SET @IdsString = REPLACE(@IdsString, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, LEFT(@IdsString, @Position - 1))
+					SET @IdsString = RIGHT(@IdsString, LEN(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Strings__ConvertirIdsString_ToTable_INT_ConIndice') IS NOT NULL) DROP FUNCTION ufc_Strings__ConvertirIdsString_ToTable_INT_ConIndice
+GO
+CREATE FUNCTION ufc_Strings__ConvertirIdsString_ToTable_INT_ConIndice
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @IDs TABLE
+		(Indice INT IDENTITY(1,1), id INT)
+	AS
+	BEGIN
+		SET @IdsString = REPLACE(@IdsString, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, LEFT(@IdsString, @Position - 1))
+					SET @IdsString = RIGHT(@IdsString, LEN(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Strings__ConvertirIdsString_ToTable_CHAR') IS NOT NULL) DROP FUNCTION ufc_Strings__ConvertirIdsString_ToTable_CHAR
+GO
+CREATE FUNCTION ufc_Strings__ConvertirIdsString_ToTable_CHAR
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @Codigos TABLE
+		(Codigo CHAR(2))
+	AS
+	BEGIN
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @Codigos
+					SELECT CONVERT(CHAR(2), left(@IdsString, @Position - 1))
+					SET @IdsString = right(@IdsString, len(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @Codigos
+					SELECT CONVERT(CHAR(2), @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+-- Strings /Funciones/ - FIN
+
+
+
+
+-- SPs /Funciones/ - INICIO
+	--
+-- SPs /Funciones/ - FIN
+
+
+
+
+-- Ubicaciones /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Ubicaciones__RootDeCarpetasDelSistema') IS NOT NULL) DROP FUNCTION ufc_Ubicaciones__RootDeCarpetasDelSistema
+GO				
+CREATE FUNCTION ufc_Ubicaciones__RootDeCarpetasDelSistema
+	()
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		RETURN 'Intranet/__Contenidos/Contextos'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Ubicaciones__CompletaDeConenidosDeTabla') IS NOT NULL) DROP FUNCTION ufc_Ubicaciones__CompletaDeConenidosDeTabla
+GO				
+CREATE FUNCTION ufc_Ubicaciones__CompletaDeConenidosDeTabla
+	(
+		@UsuarioQueEjecutaId		INT -- Para ver su contexto
+		--,@Tabla						VARCHAR(80)
+		,@TablaId					INT
+		
+		,@Seccion					VARCHAR(30)
+		,@CodigoDelContexto			VARCHAR(40)
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Root VARCHAR(100) 
+		EXEC @Root = ufc_Ubicaciones__RootDeCarpetasDelSistema
+		
+		DECLARE @ContextoId INT
+		EXEC @ContextoId = ufc_Contextos__ContextoId  
+								@UsuarioId = @UsuarioQueEjecutaId
+								,@Seccion = @Seccion
+								,@CodigoDelContexto	= @CodigoDelContexto
+		
+		DECLARE @CarpetaDeContexto VARCHAR(16) = (SELECT CarpetaDeContenidos FROM Contextos WHERE id = @ContextoId)
+		
+		--DECLARE @CarpetaDeTabla VARCHAR(12) = (SELECT Nomenclatura FROM Tablas WHERE Nombre = @Tabla)
+		DECLARE @CarpetaDeTabla VARCHAR(12) = (SELECT Nomenclatura FROM Tablas WHERE id = @TablaId)
+		
+		DECLARE @PathCompleto VARCHAR(100) = @Root + '/' + @CarpetaDeContexto + '/' + @CarpetaDeTabla
+		
+		RETURN @PathCompleto
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Ubicaciones__RelativaCompletaDeConenidosDeTabla') IS NOT NULL) DROP FUNCTION ufc_Ubicaciones__RelativaCompletaDeConenidosDeTabla
+GO				
+CREATE FUNCTION ufc_Ubicaciones__RelativaCompletaDeConenidosDeTabla
+	(
+		@UsuarioQueEjecutaId		INT -- Para ver su contexto
+		--,@Tabla						VARCHAR(80)
+		,@TablaId					INT
+		
+		,@Seccion					VARCHAR(30)
+		,@CodigoDelContexto			VARCHAR(40)
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @PathCompleto VARCHAR(100)
+		--EXEC @PathCompleto = ufc_Ubicaciones__CompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @Tabla = @Tabla
+		EXEC @PathCompleto = ufc_Ubicaciones__CompletaDeConenidosDeTabla  
+								@UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+								,@TablaId = @TablaId
+								,@Seccion = @Seccion
+								,@CodigoDelContexto	= @CodigoDelContexto
+		
+		RETURN @PathCompleto --'~/' + @PathCompleto
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Ubicaciones__RelativaDeIconos') IS NOT NULL) DROP FUNCTION  ufc_Ubicaciones__RelativaDeIconos
+GO				
+CREATE FUNCTION  ufc_Ubicaciones__RelativaDeIconos
+	()
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Root VARCHAR(100) 
+		EXEC @Root = ufc_Ubicaciones__RootDeCarpetasDelSistema
+		
+		RETURN @Root + '/' + 'images/iconos'
+	END
+GO
+-- Ubicaciones /Funciones/ - FIN
+
+
+
+
+-- Usuarios /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_Usuarios__GenerarUserName_ConNApellido') IS NOT NULL) DROP FUNCTION ufc_Usuarios__GenerarUserName_ConNApellido
+GO
+CREATE FUNCTION ufc_Usuarios__GenerarUserName_ConNApellido
+	(
+		@Prefijo			VARCHAR(5)
+		,@Nombre			VARCHAR(50)
+		,@Apellido			VARCHAR(50)
+		,@ValorAleatorio	VARCHAR(50)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		-- No deja ejecutar ni RAND() ni NEWID() dentro de funciones --> la paso.
+		--DECLARE @Pass VARCHAR(100) = 'CambiarPWD' + CAST(ROUND(((999 - 1) * RAND() + 1), 0) AS VARCHAR(MAX))
+		--DECLARE @Aleatorio varchar(50) = CONVERT(varchar(50), NEWID())
+		--SET @NumAleatorio = ROUND(((999 - 1) * @NumAleatorio + 1), 0)
+		
+		
+		RETURN REPLACE(LEFT(@Prefijo + SUBSTRING(@Nombre, 1, 1) + @Apellido + @ValorAleatorio, 40), ' ', '')
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__GenerarUserName_ConEmail') IS NOT NULL) DROP FUNCTION ufc_Usuarios__GenerarUserName_ConEmail
+GO
+CREATE FUNCTION ufc_Usuarios__GenerarUserName_ConEmail
+	(
+		@Prefijo			VARCHAR(10)
+		,@Email				VARCHAR(60)
+		,@Sufijo			VARCHAR(10)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		DECLARE @un VARCHAR(40)
+		
+		SET @Email = SUBSTRING(@Email, 1, charindex('@', @Email)-1)
+		SET @un = @Prefijo + @Email + @Sufijo
+		
+		RETURN LOWER(REPLACE(@un, ' ', ''))
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__GenerarUserName_ConNombrePuntoApellido') IS NOT NULL) DROP FUNCTION ufc_Usuarios__GenerarUserName_ConNombrePuntoApellido
+GO
+CREATE FUNCTION ufc_Usuarios__GenerarUserName_ConNombrePuntoApellido
+	(
+		@Prefijo			VARCHAR(10)
+		,@Nombre			VARCHAR(50)
+		,@Apellido			VARCHAR(50)
+		,@Sufijo			VARCHAR(10)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN REPLACE(LEFT(@Prefijo + @Nombre + '.' + @Apellido + @Sufijo, 40), ' ', '')
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__Administrador') IS NOT NULL) DROP FUNCTION ufc_Usuarios__Administrador
+GO
+CREATE FUNCTION ufc_Usuarios__Administrador
+	(
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN 'administrador'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__AdministradorDeSoportes') IS NOT NULL) DROP FUNCTION ufc_Usuarios__AdministradorDeSoportes
+GO
+CREATE FUNCTION ufc_Usuarios__AdministradorDeSoportes
+	(
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN 'AdministradorDeSoportes'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__Anonimo') IS NOT NULL) DROP FUNCTION ufc_Usuarios__Anonimo
+GO
+CREATE FUNCTION ufc_Usuarios__Anonimo
+	(
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN 'anonimo'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__MasterAdmin') IS NOT NULL) DROP FUNCTION ufc_Usuarios__MasterAdmin
+GO
+CREATE FUNCTION ufc_Usuarios__MasterAdmin
+	(
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN 'masteradmin'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__NombreCompletoFormateado') IS NOT NULL) DROP FUNCTION ufc_Usuarios__NombreCompletoFormateado
+GO
+CREATE FUNCTION ufc_Usuarios__NombreCompletoFormateado
+	(
+		@id		INT
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Nombre			VARCHAR(40)
+			,@Apellido		VARCHAR(40)
+		
+		SELECT @Nombre = Nombre, @Apellido = Apellido FROM Usuarios WHERE id = @id
+		
+		RETURN @Apellido + ', ' + @Nombre -- @Nombre + ' ' + @Apellido // Es mejor que comience co el apellido ya que al ordenar, uno espera ordenar por apellido.
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Usuarios__NombreCompletoConUserNameFormateado') IS NOT NULL) DROP FUNCTION ufc_Usuarios__NombreCompletoConUserNameFormateado
+GO
+CREATE FUNCTION ufc_Usuarios__NombreCompletoConUserNameFormateado
+	(
+		@id		INT
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Nombre			VARCHAR(40)
+			,@Apellido		VARCHAR(40)
+			,@UserName		VARCHAR(40)
+			,@CodigoDelContexto		VARCHAR(40)
+		
+		SELECT @Nombre = U.Nombre, @Apellido = U.Apellido, @UserName = U.UserName, @CodigoDelContexto = C.Codigo
+			FROM Usuarios U
+				INNER JOIN Contextos C ON U.ContextoId = C.id
+			WHERE U.id = @id
+		
+		RETURN @Apellido + ', ' + @Nombre + ' (' + @UserName + '@' + @CodigoDelContexto + ')' -- @Nombre + ' ' + @Apellido // Es mejor que comience co el apellido ya que al ordenar, uno espera ordenar por apellido.
+	END
+GO
+-- Usuarios /Funciones/ - FIN
+
+
+-- ---------------------------------
+-- Script: DB_ParticularCore__C06__Funciones.sql - FIN
+-- =====================================================

@@ -1,0 +1,61 @@
+﻿@model IEnumerable<ControladoresCore.ViewModels.UsuariosVM>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Usuarios - Index</h2>
+
+
+<p>
+    @Html.ActionLink("Create New", "Create")
+</p>
+<table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+    <thead>
+        <tr>
+            @*<th field="LogonName">
+                @Html.DisplayNameFor(model => model.LogonName)
+            </th>
+            <th field="Nombre">
+                @Html.DisplayNameFor(model => model.Nombre)
+            </th>
+            <th field="Apellido">
+                @Html.DisplayNameFor(model => model.Apellido)
+            </th>*@
+            <th field="Email">
+                @Html.DisplayNameFor(model => model.Email)
+            </th>
+            @*<th field="Email2">
+                @Html.DisplayNameFor(model => model.Email2)
+            </th>
+            <th field="Telefono">
+                @Html.DisplayNameFor(model => model.Telefono)
+            </th>
+            <th field="Telefono2">
+                @Html.DisplayNameFor(model => model.Telefono2)
+            </th>
+            <th field="Direccion">
+                @Html.DisplayNameFor(model => model.Direccion)
+            </th>
+            <th field="Observacion">
+                @Html.DisplayNameFor(model => model.Observacion)
+            </th>
+            <th field="UltimoLoginSesionId">
+                @Html.DisplayNameFor(model => model.UltimoLoginSesionId)
+            </th>
+            <th field="Actores">
+                @Html.DisplayNameFor(model => model.Actores)
+            </th>
+            <th field="Roles">
+                @Html.DisplayNameFor(model => model.Roles)
+            </th>*@
+            <th field="NombreCompleto">
+                @Html.DisplayNameFor(model => model.NombreCompleto)
+            </th>
+           
+            <th field="Id" mask="<a href='Edit/{VAL}'>Abrir</href>">Abrir</th>
+        </tr>
+    </thead>
+</table>
+
+@{Html.RenderPartial("_ScriptsIndex");}

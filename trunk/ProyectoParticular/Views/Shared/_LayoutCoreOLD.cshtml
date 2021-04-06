@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1 user-scalable=no">
+
+    <meta name="author" content="Iatasa" />
+    <meta name="description" content="Portal de administración de inspecciones" />
+    <meta name="keywords" content="iatasa, inspecciones" />
+    <meta name="application-name" content="Portal de administración de inspecciones" />
+
+    <link rel="icon" href="images/favicon.ico" type="ico">
+
+    <title>@ViewBag.Title - IATASA - MVC Core</title>
+    @Styles.Render("~/Content/css")
+    @Styles.Render("~/Content/templatecss")
+
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/modernizr")
+    @Scripts.Render("~/bundles/templatejs")
+    @Scripts.Render("~/bundles/bootstrap")
+    @Scripts.Render("~/bundles/jqueryval")
+</head>
+<body>
+    <!--[if lt IE 9]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+    <!-- .page-navbar -->
+    <div id="header" class="page-navbar">
+        @{Html.RenderPartial("_Cabecera");}
+    </div>
+    <!-- / page-navbar -->
+    <!-- #wrapper -->
+    <div id="wrapper">
+        <!-- .page-sidebar -->
+        <aside id="sidebar" class="page-sidebar hidden-md hidden-sm hidden-xs">
+            @{Html.RenderPartial("_MenuBarraIzquierda");}
+        </aside>
+        <!-- / page-sidebar -->
+        <!-- Start #right-sidebar -->
+        <aside id="right-sidebar" class="right-sidebar hidden-md hidden-sm hidden-xs">
+            @{Html.RenderPartial("_MenuBarraDerecha");}
+        </aside>
+        <!-- End #right-sidebar -->
+        <!-- .page-content -->
+        <div class="page-content sidebar-page right-sidebar-page clearfix">
+            <!-- .page-content-wrapper -->
+            <div class="page-content-wrapper">
+                <div class="page-content-inner">
+                    @{Html.RenderPartial("_Titulo");}
+                    <div class="row">
+
+                        @RenderBody()
+
+                    </div>
+                </div>
+                <!-- End .page-content-inner -->
+            </div>
+            <!-- / page-content-wrapper -->
+        </div>
+        <!-- / page-content -->
+    </div>
+    <!-- / #wrapper -->
+    <div style="background-color:white" id="footer" class="clearfix sidebar-page right-sidebar-page">
+        @{Html.RenderPartial("_Pie");}
+    </div>
+    <!-- End #footer  -->
+    <!-- Back to top -->
+    <div id="back-to-top">
+        <a href="#">Subir</a>
+    </div>
+
+
+    @RenderSection("scripts", required: false)
+
+
+    <script>
+        function EnviarNotificacion(Titulo, Cuerpo, Icono) {
+            Ruta = "~/Intranet/__Contenidos/Contextos/images/iconos/";
+            if (icono == null) {
+                Ruta = null;
+            }
+            else {
+                Ruta = Ruta + Icono;
+
+            }
+            if (window.Notification) {
+
+                Notification.requestPermission(function (status) {
+                    var n = new Notification(Titulo, { body: Cuerpo, icon: Ruta, vibration: 10000 });
+                });
+            }
+        }
+    </script>
+    @{string Operacion = ViewBag.Operacion;}
+
+    @switch (Operacion)
+    {
+        case "insert":
+            Html.RenderPartial("Scripts/_ScriptsInsert");
+            break;
+
+        case "delete":
+            Html.RenderPartial("Scripts/_ScriptsDelete");
+            break;
+
+        case "listado":
+            Html.RenderPartial("Scripts/_ScriptsListado");
+            break;
+
+        case "registro":
+            Html.RenderPartial("Scripts/_ScriptsRegistro");
+            break;
+
+        case "update":
+            Html.RenderPartial("Scripts/_ScriptsUpdate");
+            break;
+
+        case "otro":
+            Html.RenderPartial("Scripts/_ScriptsOtro");
+            break;
+
+        case "custom":
+            Html.RenderPartial("Scripts/_ScriptsCustom");
+            break;
+
+        default:
+            break;
+    }
+    @*<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.9/jquery.validate.min.js" type="text/javascript"></script>
+        <script src="http://ajax.aspnetcdn.com/ajax/mvc/4.0/jquery.validate.unobtrusive.js" type="text/javascript"></script>*@
+</body>
+</html>
+      

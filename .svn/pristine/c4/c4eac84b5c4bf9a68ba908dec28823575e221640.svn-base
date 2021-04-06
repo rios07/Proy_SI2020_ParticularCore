@@ -1,0 +1,310 @@
+﻿@model ControladoresCore.ViewModels.TareasVM
+@using ControladoresCore.Extensiones;
+
+@{if (ViewBag.ListadoAvanzado)
+    {
+        ViewBag.Title = "Tareas - Listado Avanzado";
+        
+        using (Html.BeginCard("Filtros"))
+        {
+            <div class="form-horizontal group-border">
+                <div class="form-group row">
+                    <label class="col-lg-1 control-label" style="vertical-align:middle">
+                        Importancia
+                    </label>
+                    <div class="col-lg-3">
+                        @Html.DropDownListFor(m => m.ImportanciaDeTareaId, new SelectList(Model.Importancias, "Id", "Nombre", Model.ImportanciaDeTareaId
+                       ), "- Todas -", new { filtro = "ImportanciaDeTareaId", @class = "form-control" })
+                    </div>
+                    <label class="col-lg-1 control-label" style="vertical-align:middle">
+                        Estado
+                    </label>
+                    <div class="col-lg-3">
+                        @Html.DropDownList("nada", new SelectList(Model.EstadosDeTareas, "Id", "Nombre"
+                       ), "- Todas -", new { filtro = "IdsString_EstadosDeTareas", @class = "form-control select2",@multiple="multiple" })
+                    </div>
+                    <label class="col-lg-1 control-label" style="vertical-align:middle">
+                        Tipo
+                    </label>
+                    <div class="col-lg-3">
+                        @Html.DropDownListFor(m => m.TipoDeTareaId, new SelectList(Model.TiposDeTareas, "Id", "Nombre"
+                       ), "- Todas -", new { filtro = "TipoDeTareaId", @class = "form-control" })
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-lg-1 control-label ">
+                        Inicio desde
+                    </label>
+                    <div class="col-lg-3">
+                        <div class="input-group" >
+                            <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                            <input class="form-control text-box single-line datepicker" filtro="FechaInicioDesde" id="FechaDesde" name="FechaDesde" type="text" value="2018-01-01">
+                        </div>
+                    </div>
+                    <label class="col-lg-1 control-label">
+                        Inicio hasta
+                    </label>
+                    <div class="col-lg-3">
+                        <div class="input-group" >
+                            <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                            <input class="form-control text-box single-line datepicker" filtro="FechaInicioHasta" id="FechaHasta" name="FechaHasta" type="text" value="2020-01-01">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-lg-1 control-label ">
+                        Limite desde
+                    </label>
+                    <div class="col-lg-3">
+                        <div class="input-group" >
+                            <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                            <input class="form-control text-box single-line datepicker" filtro="FechaLimiteDesde" id="FechaDesde" name="FechaDesde" type="text" value="2018-01-01">
+                        </div>
+                    </div>
+                    <label class="col-lg-1 control-label">
+                        Limite hasta
+                    </label>
+                    <div class="col-lg-3">
+                        <div class="input-group">
+                            <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                            <input class="form-control text-box single-line datepicker" filtro="FechaLimiteHasta" id="FechaHasta" name="FechaHasta" type="text" value="2020-01-01">
+                        </div>
+                        
+                    </div>
+                </div>
+                @if (ViewBag.DatosDeUnaPagina.AutorizadoAVerRegAnulados == true)
+                {
+                    <div class="row mt-3 mb-2">
+                        <div style="width:109.66px" class="col-lg-2  control-label">Estado de registro</div>
+                        <div class="col-lg-10 col-md-9 row" filtro="activo" type="radio">
+                            <div class="m-2 radio-custom custom-control-inline">
+                                <input type="radio" name="Radio-activo" value="true" checked="checked" id="Activos">
+                                <label for="Activos">Activos</label>
+                            </div>
+                            <div class="m-2 radio-custom custom-control-inline ">    
+                                <input type="radio" name="Radio-activo" value="false" id="Anulados">
+                                <label for="Anulados">Anulados</label>
+                            </div>
+                            <div class="m-2 radio-custom custom-control-inline">
+                                <input type="radio" name="Radio-activo" value="null" id="Todos">
+                                <label for="Todos">Todos</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="row mt-3 mb-2" hidden="hidden">
+                        <div style="width:109.66px" class="col-lg-2  control-label">Estado de registro</div>
+                        <div class="col-lg-10 col-md-9 row" filtro="activo" type="radio">
+                            <div class="m-2 radio-custom custom-control-inline">
+                                <input type="radio" name="Radio-activo" value="true" checked="checked" id="Activos">
+                                <label for="Activos">Activos</label>
+                            </div>
+                            <div class="m-2 radio-custom custom-control-inline ">    
+                                <input type="radio" name="Radio-activo" value="false" id="Anulados">
+                                <label for="Anulados">Anulados</label>
+                            </div>
+                            <div class="m-2 radio-custom custom-control-inline">
+                                <input type="radio" name="Radio-activo" value="null" id="Todos">
+                                <label for="Todos">Todos</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+                <div class="form-group row">
+                    
+                    <div class="col-lg-8">
+                        <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                        <div class="btn-group dropup mo-mb-2">
+                            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                            <div class="dropdown-menu">
+                                @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                                @*<a class="dropdown-item" href="#">Another action</a>
+                                <a class="dropdown-item" href="#">Something else here</a>*@
+                                @*<div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#">Separated link</a>*@
+                            </div>
+                           
+                           
+                        </div>
+                        
+                    </div>
+                    <div class="col-lg-4" style="padding-left: 100px;">
+                        <label size="4"><b>Tipo de listado:</b></label>
+                        <a class="btn btn-primary" type="button" href="~/@ViewBag.Seccion/Tareas/Listado">Simple</a>
+                        <a class="btn btn-default disabled" style="cursor:not-allowed" href="#">Avanzado</a>
+                    </div>
+
+                </div>
+            </div>
+        }
+
+        using (Html.BeginCard("Listado Avanzado"))
+        {
+            <table id="tableAjax" class="table table-bordered table-striped table-responsive table-hover per100">
+                <thead>
+                    <tr>
+                        <th field="Numero">
+                            Nº
+                        </th>
+                        <th field="Titulo">
+                            @Html.DisplayNameFor(model => model.Titulo)
+                        </th>
+                        <th field="FechaDeInicio">
+                            @Html.DisplayNameFor(model => model.FechaDeInicio)
+                        </th>
+
+                        <th field="FechaLimite">
+                            @Html.DisplayNameFor(model => model.FechaLimite)
+                        </th>
+
+                        <th field="UsuarioOriginante">
+                            @Html.DisplayNameFor(model => model.UsuarioOriginante)
+                        </th>
+                        <th field="UsuarioDestinatario">
+                            @Html.DisplayNameFor(model => model.UsuarioDestinatario)
+                        </th>
+
+                        <th field="TipoDeTarea">
+                            @Html.DisplayNameFor(model => model.TipoDeTarea)
+                        </th>
+                        <th field="ImportanciaDeTarea">
+                            @Html.DisplayNameFor(model => model.ImportanciaDeTarea)
+                        </th>
+                        <th field="EstadoDeTarea">
+                            @Html.DisplayNameFor(model => model.EstadoDeTarea)
+                        </th>
+                        <th field="Activo" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/{VAL}.svg'>">
+                            Activo
+                        </th>
+
+                        @HtmlHelperExtension.Boton("Tareas", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+                    </tr>
+                </thead>
+            </table>
+        }
+
+    }
+    else
+    {
+        ViewBag.Title = "Tareas - Listado";
+
+        @*<div class="card card-primary plain">
+
+
+                <div class="card-body row">
+
+                </div>
+            </div>*@
+
+        using (Html.BeginCard("Filtros"))
+        {
+        <div class="form-horizontal group-border">
+            <div class="form-group row">
+                <label class="col-lg-1 control-label" style="vertical-align:middle">
+                    Importancia
+                </label>
+                <div class="col-lg-3">
+                    @Html.DropDownListFor(m => m.ImportanciaDeTareaId, new SelectList(Model.Importancias, "Id", "Nombre", Model.ImportanciaDeTareaId
+                        ), "- Todas -", new { filtro = "ImportanciaDeTareaId", @class = "form-control" })
+                </div>
+                <label class="col-lg-1 control-label" style="vertical-align:middle">
+                    Estado
+                </label>
+                <div class="col-lg-3">
+                    @Html.DropDownList("nada", new SelectList(Model.EstadosDeTareas, "Id", "Nombre"
+                        ), "- Todas -", new { filtro = "IdsString_EstadosDeTareas", @class = "form-control select2",@multiple="multiple" })
+                </div>
+
+            </div>
+            
+                <div class="row mt-3 mb-2" hidden="hidden">
+                    <div style="width:109.66px" class="col-lg-2  control-label">Estado de registro</div>
+                    <div class="col-lg-10 col-md-9 row" filtro="activo" type="radio">
+                        <div class="m-2 radio-custom custom-control-inline">
+                            <input type="radio" name="Radio-activo" value="true" checked="checked" id="Activos">
+                            <label for="Activos">Activos</label>
+                        </div>
+                        <div class="m-2 radio-custom custom-control-inline ">
+                            <input type="radio" name="Radio-activo" value="false" id="Anulados">
+                            <label for="Anulados">Anulados</label>
+                        </div>
+                        <div class="m-2 radio-custom custom-control-inline">
+                            <input type="radio" name="Radio-activo" value="null" id="Todos">
+                            <label for="Todos">Todos</label>
+                        </div>
+                    </div>
+                </div>
+            
+            <div class="form-group row">
+                <div class="col-lg-8">
+                    <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                    <div class="btn-group dropup mo-mb-2">
+                        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                        <div class="dropdown-menu">
+                            @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                            @*<a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>*@
+                            @*<div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Separated link</a>*@
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4" style ="padding-left: 105px">
+                       
+                        <label><b>Tipo de listado:</b></label>
+                        <a class="btn btn-default disabled" style="cursor: not-allowed" type="button" href="#">Simple</a><a class="btn btn-primary  " href="~/@ViewBag.Seccion/Tareas/Listado/Avanzado">Avanzado</a>
+                        
+                </div>
+  
+            </div>
+        </div>
+        }
+
+        using (Html.BeginCard("Listado"))
+        {
+            <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+                <thead>
+                    <tr>
+                        <th field="Numero">
+                            Nº
+                        </th>
+                        <th field="Titulo">
+                            @Html.DisplayNameFor(model => model.Titulo)
+                        </th>
+                        <th field="FechaLimite">
+                            @Html.DisplayNameFor(model => model.FechaLimite)
+                        </th>
+
+                        <th field="UsuarioDestinatario">
+                            @Html.DisplayNameFor(model => model.UsuarioDestinatario)
+                        </th>
+                        <th field="TipoDeTarea">
+                            @Html.DisplayNameFor(model => model.TipoDeTarea)
+                        </th>
+                        <th field="ImportanciaDeTarea">
+                            @Html.DisplayNameFor(model => model.ImportanciaDeTarea)
+                        </th>
+                        <th field="EstadoDeTarea">
+                            @Html.DisplayNameFor(model => model.EstadoDeTarea)
+                        </th>
+                        @*<th field="Activo" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/{VAL}.svg'>">
+                                Activo
+                            </th>*@
+
+                        @HtmlHelperExtension.Boton("Tareas", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+                    </tr>
+                </thead>
+            </table>
+        }
+    }
+}
+
+
+
+<script>
+    function GetRadioValue(radioId) {
+        return $('input[name=' + radioId + ']:checked').val();
+    }
+</script>

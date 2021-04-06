@@ -1,0 +1,62 @@
+﻿@using ControladoresCore.Extensiones
+
+
+
+<div style="padding-top: 5px;" class="media"  >
+    <div class="media-body" id="ArchivosDeRegistro" >
+
+    </div>
+</div>
+
+<script type="text/javascript">
+    var divMostrar = null;
+    $(function () {
+        divMostrar = $("#ArchivosDeRegistro");
+        CargarArchivos();
+    });
+
+    function CargarArchivos() {
+        var datos = {
+            pRegistroId: $("#Id").val()
+        }
+        var cantDeArchivos = 0;
+        $.ajax({
+            url: '@Url.Action("CargarArchivos")', //Usando razor en js, voilá
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (data) {
+                $.get("/TemplateArchivos.html", function (template) {
+                    divMostrar.empty();
+                    data.forEach(function (item) {
+                        MostrarArchivo(item, template);
+                        cantDeArchivos++;
+                    });
+                    $('#TabArchivos').html('Archivos (' + cantDeArchivos + ')');
+
+                });
+            },
+            data: JSON.stringify(datos)
+        });
+    }
+    function MostrarArchivo(item, template) {
+        for (var field in item)
+            while (template.indexOf("[" + field + "]") != -1)
+                if (item[field] != null)
+                    template = template.replace("[" + field + "]", item[field]);
+                else
+                    template = template.replace("[" + field + "]", "");
+        divMostrar.append(template);
+    }
+
+</script>
+
+<style>
+    .media hr {
+        margin: 5px;
+    }
+
+    .datos h4 {
+        font-size: 16px;
+    }
+</style>

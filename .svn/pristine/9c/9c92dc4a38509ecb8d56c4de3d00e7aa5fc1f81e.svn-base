@@ -1,0 +1,82 @@
+﻿@model ControladoresCore.ViewModels.LogEnviosDeCorreosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Registro de Envios - Modificar registro";
+}
+<div class="row">
+    <div class="col-md-10">
+
+    </div>
+
+</div>
+@using (Html.BeginForm())
+{
+    using (Html.BeginCard("Editar Registro"))
+    {
+
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            @Html.HiddenFor(model => model.Id)
+
+
+
+
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.Observaciones, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.TextAreaFor(model => model.Observaciones, new { @class = "form-control", disabled = "disabled", @readonly = "readonly", rows = "3" })
+                    @Html.ValidationMessageFor(model => model.Observaciones, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.ObservacionesDeRevision, htmlAttributes: new { @class = "control-label col-md-3 " })
+                <div class="col-md-9">
+                    @Html.TextAreaFor(model => model.ObservacionesDeRevision, new { @class = "form-control", @rows = "5" })
+                    @Html.ValidationMessageFor(model => model.ObservacionesDeRevision, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+
+
+
+        </div>
+    }
+
+
+
+    @section Scripts {
+        @Scripts.Render("~/bundles/jqueryval")
+    }
+
+        <div class="card" id="dyn_2">
+            <h4 style="padding:1px; background-color:var(--color-primary)" class="card-header mt-0"></h4>
+            <div class="card-body fade-in p-2">
+                <div class="col-lg-12 pull-left botonera">
+                    @HtmlHelperExtension.Boton("LogEnviosDeCorreos","Listado",ViewBag.Seccion)
+                    @HtmlHelperExtension.Boton("Update", ViewBag.DatosDeUnaPagina.AutorizadoACargarLaPagina,ViewBag.Seccion)
+                </div>
+            </div>
+        </div>
+}
+
+<script src="~/template/plugins/forms/summernote/summernote.js"></script>
+<script src="~/template/js/HtmlEditor.js"></script>
+
+
+<script>
+    $(function () {
+        $('.note-editable').html($('.html-text-editor').val());
+    })
+    function MoverContenido() {
+        if (($('.note-editable').html() != "<p><br></p>")) {
+            $('.html-text-editor').val($('.note-editable').html());
+            return true;
+        }
+        return false;
+    }
+
+</script>

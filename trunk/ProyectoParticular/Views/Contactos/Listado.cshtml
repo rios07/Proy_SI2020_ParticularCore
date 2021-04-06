@@ -1,0 +1,98 @@
+﻿@using ControladoresCore.Extensiones
+@model ControladoresCore.ViewModels.ContactosVM
+@{
+    ViewBag.Title = "Usuarios - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border">
+        <div class="form-group row">
+            <label class="col-lg-1 control-label">
+                Grupo de contactos
+            </label>
+            <div class="col-lg-3">
+                @Html.DropDownListFor(m => m.GrupoDeContactoId, new SelectList(Model.GruposDeContactos, "Id", "Nombre", Model.GrupoDeContactoId
+                    ), "- Todas -", new {filtro = "GrupoDeContactoId", @class = "form-control select2"})
+            </div>
+            <label class="col-md-1 control-label">
+                Tipo de contacto
+            </label>
+            <div class="col-md-3">
+                @Html.DropDownListFor(m => m.TiposDeContactosIds, new SelectList(Model.TiposDeContactos, "Id", "Nombre", Model.TiposDeContactosIds
+                    ), "- Todas -", new {filtro = "TipoDeContactoId", @class = "form-control  select2" }) 
+            </div>
+
+        </div>
+
+
+        <div class="row">
+            <div class="col-lg-8">
+
+                <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                <div class="btn-group dropup mo-mb-2">
+                    <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                    <div class="dropdown-menu">
+                        @Html.ActionLink("Exportar registros", "Exportar", null, new {@class = "dropdown-item"}).DisableIf(() => ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina == false)
+                        @*<a class="dropdown-item" href="#">Another action</a>
+                <a class="dropdown-item" href="#">Something else here</a>*@
+                        @*<div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="#">Separated link</a>*@
+                    </div>
+                </div>
+                <a class="btn btn-danger removeOnIframe" href="/intranet/Home/Index">Regresar</a>
+            </div>
+        </div>
+    </div>
+}
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" style="table-layout: fixed" class="table table-bordered table-striped responsive table-hover per100 dataTable no-footer dtr-inline">
+        <thead>
+        <tr>
+            <th field="NombreCompleto">
+                @Html.DisplayNameFor(model => model.NombreCompleto)
+            </th>
+
+            <th field="Alias">
+                @Html.DisplayNameFor(model => model.Alias)
+            </th>
+
+            <th field="EsUnaOrganizacion" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/{VAL}.svg'>">
+                Es organización
+            </th>
+            <th field="TiposDeContacto">
+                @Html.DisplayNameFor(model => model.TiposDeContacto)
+            </th>
+            <th field="GruposDeContacto">
+                @Html.DisplayNameFor(model => model.GruposDeContacto)
+            </th>
+
+            <th field="Email">
+                @Html.DisplayNameFor(model => model.Email)
+            </th>
+
+            <th field="Telefono">
+                @Html.DisplayNameFor(model => model.Telefono)
+            </th>
+
+            @*<th field="Activo" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/{VAL}.svg'>">
+                        Activo
+                    </th>*@
+
+            @HtmlHelperExtension.Boton("Contactos", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.Seccion)
+
+
+        </tr>
+        </thead>
+    </table>
+}
+
+<style>
+    td {
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

@@ -1,0 +1,2438 @@
+-- =====================================================
+-- Descripción: Listados Particulares.sql
+-- Script: 12b_Core__Listados Particulares.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+
+		-- Tablas Involucradas: - INICIO
+			-- Archivos
+			-- Contactos
+			-- usp_EnviosDeCorreos__Pendientes
+			-- GruposDeContactos
+			-- Importaciones
+			-- Informes
+			-- LogEnviosDeCorreos
+			-- Notificaciones
+			-- Publicaciones
+			-- usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId
+			-- RelAsig_RolesDeUsuarios_A_Paginas
+			-- RelAsig_TiposDeContactos_A_Contextos
+			-- Soportes
+			-- Tareas
+			-- usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto
+			-- Usuarios
+		-- Tablas Involucradas: - FIN
+
+
+
+
+-- SP-TABLA: Archivos /Listados/ - INICIO
+IF (OBJECT_ID('usp_Archivos__Listado') IS NOT NULL) DROP PROCEDURE usp_Archivos__Listado
+GO
+CREATE PROCEDURE usp_Archivos__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@Tabla						VARCHAR(80)
+		,@RegistroId				INT
+		
+		,@sResSQL					VARCHAR(1000)			OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE --@Tabla VARCHAR(80) = 'Archivos'
+			@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validará contra la rtabla: @Tabla
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		--SET @sResSQL = ''
+			
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				DECLARE @UbicacionRelativaCompleta VARCHAR(100)
+				EXEC @UbicacionRelativaCompleta = ufc_UbicacionRelativaCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @TablaId = @TablaId
+
+				DECLARE @UbicacionDeIconos VARCHAR(100)
+				EXEC @UbicacionDeIconos = ufc_UbicacionRelativaDeIconos
+
+				SELECT 	A.id
+						,@UbicacionRelativaCompleta + '/' + A.NombreFisicoCompleto AS Ruta
+						,A.NombreAMostrar
+						,A.Observaciones
+						,@UbicacionDeIconos + '/' + ICO.Imagen AS imgArchivo
+						,EXTDA.ProgramaAsociado
+						,EXTDA.Nombre AS Extension
+				FROM Archivos A
+					INNER JOIN ExtensionesDeArchivos EXTDA ON EXTDA.id = A.ExtensionDeArchivoId
+					INNER JOIN Iconos ICO ON ICO.id = EXTDA.IconoId
+				WHERE A.TablaId = @TablaId AND A.RegistroId = @RegistroId AND A.ContextoId = @ContextoId
+				ORDER BY A.Orden
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Archivos__Listado_y_SwapOrden') IS NOT NULL) DROP PROCEDURE usp_Archivos__Listado_y_SwapOrden
+GO
+CREATE PROCEDURE usp_Archivos__Listado_y_SwapOrden
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@Tabla						VARCHAR(80) -- Es la Tabla de "referencia" del Archivo; EJ: "Informes"
+		,@RegistroId				INT -- Es el id del Archivo de referencia, o sea, "el id del Informe"
+		
+		,@SwapOrdenDelRegistroId	INT -- Es el id del Archivo que queremos "Subir" 1 nivel.
+		
+		,@sResSQL					VARCHAR(1000)			OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE --@Tabla VARCHAR(80) = 'Archivos'
+			@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validará contra la tabla: @Tabla
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		EXEC usp_Archivos_SwapOrden  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+			,@Tabla = @Tabla, @RegistroId = @RegistroId, @SwapOrdenDelRegistroId = @SwapOrdenDelRegistroId, @sResSQL = @sResSQL OUTPUT
+			
+		IF @sResSQL = '' -- Ejecuté el cambio de orden, y devuelvo ordenado
+			BEGIN
+				DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				DECLARE @UbicacionRelativaCompleta VARCHAR(100)
+				EXEC @UbicacionRelativaCompleta = ufc_UbicacionRelativaCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @TablaId = @TablaId
+
+				DECLARE @UbicacionDeIconos VARCHAR(100)
+				EXEC @UbicacionDeIconos = ufc_UbicacionRelativaDeIconos
+
+				SELECT 	A.id
+						,@UbicacionRelativaCompleta + '/' + A.NombreFisicoCompleto AS Ruta
+						,A.NombreAMostrar
+						,A.Observaciones
+						,@UbicacionDeIconos + '/' + ICO.Imagen AS imgArchivo
+						,EXTDA.ProgramaAsociado
+						,EXTDA.Nombre AS Extension
+				FROM Archivos A
+					INNER JOIN ExtensionesDeArchivos EXTDA ON EXTDA.id = A.ExtensionDeArchivoId
+					INNER JOIN Iconos ICO ON ICO.id = EXTDA.IconoId
+				WHERE A.TablaId = @TablaId AND A.RegistroId = @RegistroId AND A.ContextoId = @ContextoId
+				ORDER BY A.Orden
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Archivos /Listados/ - FIN
+
+ 
+ 
+ 
+-- SP-TABLA: Contactos /Listados/ - INICIO
+IF (OBJECT_ID('usp_Contactos__Listado') IS NOT NULL) DROP PROCEDURE usp_Contactos__Listado
+GO
+CREATE PROCEDURE usp_Contactos__Listado
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@OrdenarPor                                    VARCHAR(50) = ''
+	,@Sentido                                       BIT = 0
+	,@Filtro                                        VARCHAR(50) = ''
+	
+	,@Activo                                        BIT = NULL
+ 
+	,@GrupoDeContactoId	                            INT = '-1' -- FiltroDDL (FK)
+	
+	,@RegistrosPorPagina                            INT = '-1'
+	,@NumeroDePagina                                INT = '1'
+	,@TotalDeRegistros                              INT		OUTPUT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contactos'
+		,@FuncionDePagina VARCHAR(30) = 'Listado'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT * INTO #TempTable
+			FROM
+				(
+					SELECT CTOS.id
+					--,CTOS.ContextoId
+					,CTOS.EsUnaOrganizacion
+					,CTOS.NombreCompleto
+					,CTOS.Alias
+					,CTOS.Organizacion
+					--,CTOS.RelacionConElContacto
+					,CTOS.Email
+					--,CTOS.Email2
+					,CTOS.Telefono
+					--,CTOS.Telefono2
+					--,CTOS.Direccion
+					--,CTOS.Url
+					--,CTOS.Observaciones
+					,CTOS.Activo
+					,CAST(CX.Nombre AS VARCHAR(MAX)) AS Contexto
+					-- IdsString:
+					--,COALESCE(STUFF((SELECT ', ' + CAST(RACATDC.TipoDeContactoId AS VARCHAR(MAX))
+					--	FROM RelAsig_Contactos_A_TiposDeContactos AS RACATDC
+					--		INNER JOIN Contactos CON ON CON.id = RACATDC.ContactoId
+					--	WHERE (RACATDC.ContactoId = @id)
+					--	FOR XML PATH('')),1,1,''), '') AS TipoDeContactoIdsString
+					-- Nombres String:
+					,COALESCE(STUFF((SELECT ', ' + TDC.Nombre
+						FROM RelAsig_Contactos_A_TiposDeContactos AS RACATDC
+							INNER JOIN TiposDeContactos TDC ON TDC.id = RACATDC.TipoDeContactoId
+						WHERE (RACATDC.ContactoId = CTOS.id)
+						FOR XML PATH('')),1,1,''), '') AS TiposDeContactos
+					,ROW_NUMBER() OVER
+					(
+						-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+						ORDER BY
+							CASE WHEN @OrdenarPor = 'id' AND @Sentido = '0' THEN CTOS.id END
+							,CASE WHEN @OrdenarPor = 'id' AND @Sentido = '1' THEN CTOS.id END DESC
+							--,CASE WHEN @OrdenarPor = 'ContextoId' AND @Sentido = '0' THEN CTOS.ContextoId END
+							--,CASE WHEN @OrdenarPor = 'ContextoId' AND @Sentido = '1' THEN CTOS.ContextoId END DESC
+							,CASE WHEN @OrdenarPor = 'EsUnaOrganizacion' AND @Sentido = '0' THEN CTOS.EsUnaOrganizacion END
+							,CASE WHEN @OrdenarPor = 'EsUnaOrganizacion' AND @Sentido = '1' THEN CTOS.EsUnaOrganizacion END DESC
+							,CASE WHEN @OrdenarPor = 'NombreCompleto' AND @Sentido = '0' THEN CTOS.NombreCompleto END
+							,CASE WHEN @OrdenarPor = 'NombreCompleto' AND @Sentido = '1' THEN CTOS.NombreCompleto END DESC
+							,CASE WHEN @OrdenarPor = 'Alias' AND @Sentido = '0' THEN CTOS.Alias END
+							,CASE WHEN @OrdenarPor = 'Alias' AND @Sentido = '1' THEN CTOS.Alias END DESC
+							,CASE WHEN @OrdenarPor = 'Organizacion' AND @Sentido = '0' THEN CTOS.Organizacion END
+							,CASE WHEN @OrdenarPor = 'Organizacion' AND @Sentido = '1' THEN CTOS.Organizacion END DESC
+							,CASE WHEN @OrdenarPor = 'RelacionConElContacto' AND @Sentido = '0' THEN CTOS.RelacionConElContacto END
+							,CASE WHEN @OrdenarPor = 'RelacionConElContacto' AND @Sentido = '1' THEN CTOS.RelacionConElContacto END DESC
+							,CASE WHEN @OrdenarPor = 'Email' AND @Sentido = '0' THEN CTOS.Email END
+							,CASE WHEN @OrdenarPor = 'Email' AND @Sentido = '1' THEN CTOS.Email END DESC
+							--,CASE WHEN @OrdenarPor = 'Email2' AND @Sentido = '0' THEN CTOS.Email2 END
+							--,CASE WHEN @OrdenarPor = 'Email2' AND @Sentido = '1' THEN CTOS.Email2 END DESC
+							,CASE WHEN @OrdenarPor = 'Telefono' AND @Sentido = '0' THEN CTOS.Telefono END
+							,CASE WHEN @OrdenarPor = 'Telefono' AND @Sentido = '1' THEN CTOS.Telefono END DESC
+							--,CASE WHEN @OrdenarPor = 'Telefono2' AND @Sentido = '0' THEN CTOS.Telefono2 END
+							--,CASE WHEN @OrdenarPor = 'Telefono2' AND @Sentido = '1' THEN CTOS.Telefono2 END DESC
+							--,CASE WHEN @OrdenarPor = 'Direccion' AND @Sentido = '0' THEN CTOS.Direccion END
+							--,CASE WHEN @OrdenarPor = 'Direccion' AND @Sentido = '1' THEN CTOS.Direccion END DESC
+							--,CASE WHEN @OrdenarPor = 'Url' AND @Sentido = '0' THEN CTOS.Url END
+							--,CASE WHEN @OrdenarPor = 'Url' AND @Sentido = '1' THEN CTOS.Url END DESC
+							--,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '0' THEN CTOS.Observaciones END
+							--,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '1' THEN CTOS.Observaciones END DESC
+							--,CASE WHEN @OrdenarPor = 'Contexto' AND @Sentido = '0' THEN CX.Nombre END
+							--,CASE WHEN @OrdenarPor = 'Contexto' AND @Sentido = '1' THEN CX.Nombre END DESC
+					) AS NumeroDeRegistro
+			FROM Contactos AS CTOS
+				INNER JOIN Contextos CX ON CX.id = CTOS.ContextoId
+			WHERE
+				(CTOS.id > '0') -- No es necesario, pero para mantener estructura de los "AND" Siguientes.
+				AND (CTOS.Activo = @Activo OR @Activo IS NULL)
+				AND (CTOS.ContextoId = @ContextoId OR @ContextoId = '-1')
+				AND (@GrupoDeContactoId IN (SELECT GrupoDeContactoId FROM RelAsig_Contactos_A_GruposDeContactos RACAG WHERE RACAG.ContactoId = CTOS.id) OR @GrupoDeContactoId = '-1') -- FiltroDDL (FK)
+				AND
+				(
+					(@Filtro = '')
+					OR (CTOS.EsUnaOrganizacion LIKE '%' + @Filtro + '%')
+					OR (CTOS.NombreCompleto LIKE '%' + @Filtro + '%')
+					OR (CTOS.Alias LIKE '%' + @Filtro + '%')
+					OR (CTOS.Organizacion LIKE '%' + @Filtro + '%')
+					OR (CTOS.RelacionConElContacto LIKE '%' + @Filtro + '%')
+					OR (CTOS.Email LIKE '%' + @Filtro + '%')
+					--OR (CTOS.Email2 LIKE '%' + @Filtro + '%')
+					OR (CTOS.Telefono LIKE '%' + @Filtro + '%')
+					--OR (CTOS.Telefono2 LIKE '%' + @Filtro + '%')
+					--OR (CTOS.Direccion LIKE '%' + @Filtro + '%')
+					--OR (CTOS.Url LIKE '%' + @Filtro + '%')
+					--OR (CTOS.Observaciones LIKE '%' + @Filtro + '%')
+					--OR (CX.Nombre LIKE '%' + @Filtro + '%')
+				)
+		) Query
+ 
+		SELECT *
+		FROM  #TempTable
+			WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina))-- Con Paginación:
+ 
+			SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+			DROP TABLE #TempTable
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_Contactos__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_Contactos__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_Contactos__ListadoDDLoCBXL
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+	,@Activo                                        BIT = NULL
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contactos'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT CTOS.id
+					,CTOS.NombreCompleto
+			FROM Contactos AS CTOS
+			WHERE -- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(CTOS.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR (	(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					-- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					 AND (CTOS.Activo = @Activo OR @Activo IS NULL)
+					 AND (CTOS.ContextoId = @ContextoId OR @ContextoId = '-1')
+				)
+				-- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id:
+				AND (
+					(@Filtro = '')
+					OR (CTOS.NombreCompleto LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY CTOS.NombreCompleto
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Contactos /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: usp_EnviosDeCorreos__Pendientes /Listados/ - INICIO
+IF (OBJECT_ID('usp_EnviosDeCorreos__Pendientes') IS NOT NULL) DROP PROCEDURE usp_EnviosDeCorreos__Pendientes
+GO
+CREATE PROCEDURE usp_EnviosDeCorreos__Pendientes
+
+	-- NOTA: para q el listado devuelva los pendientes tiene q existir cuanta de envio de correo que esté relacionada con esa tabla de envío
+	
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'EnviosDeCorreos'
+			,@FuncionDePagina VARCHAR(30) = 'Pendientes'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				--DECLARE @ContextoId	INT
+				--EXEC	@ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+				
+				SELECT * INTO #TempTable
+				FROM
+				(
+					SELECT EDC.id
+						,EDC.EmailDeDestino AS EnvioHacia_Emails
+						,CDE.CuentaDeEmail AS EnvioDesde_Email
+						,CDE.PwdDeEmail AS EnvioDesde_Pwd
+						,CDE.Smtp AS EnvioDesde_Smtp
+						,CDE.Puerto AS EnvioDesde_Puerto
+						,EDC.Asunto
+						,EDC.Contenido
+					FROM EnviosDeCorreos EDC
+						--LEFT JOIN LogEnviosDeCorreos LEC ON LEC.EnvioDeCorreoId = EDC.id
+						INNER JOIN Tablas T ON EDC.TablaId = T.id
+						INNER JOIN RelAsig_CuentasDeEnvios_A_Tablas RACAT ON RACAT.TablaId = T.id
+						INNER JOIN CuentasDeEnvios CDE ON CDE.id = RACAT.CuentaDeEnvioId
+						--INNER JOIN Usuarios UD ON EDC.UsuarioDestinatarioId = UD.id
+					WHERE
+						--(LEC.Satisfactorio = 0)
+						--AND 
+						(EDC.FechaPactadaDeEnvio < @FechaDeEjecucion)
+						AND (DATEDIFF(DAY, EDC.FechaPactadaDeEnvio, @FechaDeEjecucion) < 31)
+						AND EDC.id NOT IN
+							(
+								SELECT EnvioDeCorreoId 
+								FROM LogEnviosDeCorreos
+								WHERE Satisfactorio = 1
+							)
+						AND NOT EXISTS
+							(
+								SELECT LEC2.id 
+								FROM LogEnviosDeCorreos LEC2
+								WHERE LEC2.EnvioDeCorreoId = EDC.id
+									AND (LEC2.Satisfactorio = 1)
+							) -- No existe log de envío exitoso
+						AND (
+								(SELECT COUNT(id) 
+									FROM LogEnviosDeCorreos LEC3 
+									WHERE LEC3.EnvioDeCorreoId = EDC.id
+										AND (LEC3.Satisfactorio = 0)
+										) IS NULL -- No existe Log de Envios Fallidos
+								OR 
+								(SELECT COUNT(id) 
+									FROM LogEnviosDeCorreos LEC3 
+									WHERE LEC3.EnvioDeCorreoId = EDC.id
+										AND (LEC3.Satisfactorio = 0)
+										) < 5 -- Si ya se intentó enviarla al menos 5 veces y falló --> no lo intento más.
+							)
+							
+							
+							
+							
+							-- Probando:
+						--AND EXISTS	(SELECT COUNT(LEDC3.id), EDC.id
+						--	FROM EnviosDeCorreos EDC
+						--		INNER JOIN LogEnviosDeCorreos LEDC3 ON LEDC3.EnvioDeCorreoId = EDC.id
+						--	GROUP BY EDC.id
+						--	HAVING COUNT(LEDC3.id) < 5)
+							
+
+						--	SELECT Employees.LastName, COUNT(Orders.OrderID) AS NumberOfOrders
+						--	FROM Orders
+						--	INNER JOIN Employees ON Orders.EmployeeID = Employees.EmployeeID
+						--	WHERE LastName = 'Davolio' OR LastName = 'Fuller'
+						--	GROUP BY LastName
+						--	HAVING COUNT(Orders.OrderID) > 25;
+
+				) Query
+				
+				SELECT	id
+						,EnvioHacia_Emails
+						,EnvioDesde_Email
+						,EnvioDesde_Pwd
+						,EnvioDesde_Smtp
+						,EnvioDesde_Puerto
+						,Asunto
+						,Contenido
+				FROM  #TempTable
+				--WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				--	OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+			
+				--SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: usp_EnviosDeCorreos__Pendientes /Listados/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: GruposDeContactos /Listados/ - INICIO
+IF (OBJECT_ID('usp_GruposDeContactos__Listado') IS NOT NULL) DROP PROCEDURE usp_GruposDeContactos__Listado
+GO
+CREATE PROCEDURE usp_GruposDeContactos__Listado
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@OrdenarPor                                    VARCHAR(50) = ''
+	,@Sentido                                       BIT = '0'
+	,@Filtro                                        VARCHAR(50) = ''
+ 
+	,@ContactoId									INT = '-1' -- FiltroDDL (FK)
+	
+	,@RegistrosPorPagina                            INT = '-1'
+	,@NumeroDePagina                                INT = '1'
+	,@TotalDeRegistros                              INT		OUTPUT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'GruposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'Listado'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT * INTO #TempTable
+			FROM
+				(
+					SELECT GDCTOS.id
+						,GDCTOS.Nombre
+						,GDCTOS.Observaciones
+						,COALESCE(STUFF((SELECT ', ' + CON.NombreCompleto
+							FROM RelAsig_Contactos_A_GruposDeContactos AS RACAGDC
+								INNER JOIN Contactos CON ON CON.id = RACAGDC.ContactoId
+							WHERE (RACAGDC.GrupoDeContactoId = GDCTOS.id)
+							FOR XML PATH('')),1,1,''), '') AS ContactosDelGrupo
+						,ROW_NUMBER() OVER
+						(
+							-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+							ORDER BY
+								CASE WHEN @OrdenarPor = '' THEN GDCTOS.Nombre END 
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '0' THEN GDCTOS.Nombre END
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '1' THEN GDCTOS.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '0' THEN GDCTOS.Observaciones END
+								,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '1' THEN GDCTOS.Observaciones END DESC
+						) AS NumeroDeRegistro
+					FROM GruposDeContactos AS GDCTOS
+						INNER JOIN Contextos CX ON CX.id = GDCTOS.ContextoId
+					WHERE
+						(GDCTOS.id > '0') -- No es necesario, pero para mantener estructura de los "AND" Siguientes.
+						AND (GDCTOS.ContextoId = @ContextoId OR @ContextoId = '-1')
+						--AND (RACAG.ContactoId = @ContactoId OR @ContactoId = '-1')
+						AND (@ContactoId IN (SELECT ContactoId FROM RelAsig_Contactos_A_GruposDeContactos RACAG WHERE RACAG.GrupoDeContactoId = GDCTOS.id) OR @ContactoId = '-1') -- FiltroDDL (FK)
+						AND
+						(
+							(@Filtro = '')
+							OR (GDCTOS.Nombre LIKE '%' + @Filtro + '%')
+							OR (GDCTOS.Observaciones LIKE '%' + @Filtro + '%')
+						)
+			) Query
+ 
+		SELECT *
+		FROM  #TempTable
+			WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+ 
+			SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+			DROP TABLE #TempTable
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_GruposDeContactos__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_GruposDeContactos__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_GruposDeContactos__ListadoDDLoCBXL
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+	,@Activo                                        BIT = NULL
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'GruposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT GDCTOS.id
+				,GDCTOS.Nombre
+			FROM GruposDeContactos AS GDCTOS
+			WHERE 
+				-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(GDCTOS.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR 
+				(
+					(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					 -- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					AND (GDCTOS.ContextoId = @ContextoId OR @ContextoId = '-1')
+				)
+				AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id:
+				(
+					(@Filtro = '')
+					OR (GDCTOS.Nombre LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY GDCTOS.Nombre
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: GruposDeContactos /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Importaciones /Listados/ - INICIO
+IF (OBJECT_ID('usp_Importaciones__Listado') IS NOT NULL) DROP PROCEDURE usp_Importaciones__Listado
+GO
+CREATE PROCEDURE usp_Importaciones__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''		
+		,@TablaId					INT = '-1' -- FiltroDDL (FK)
+		,@Activo					BIT = NULL
+		,@FechaDesde				DATE = NULL
+		,@FechaHasta				DATE = NULL
+		
+		,@RegistrosPorPagina		INT = '-1'
+		,@NumeroDePagina			INT = 1
+		,@TotalDeRegistros			INT		OUTPUT
+				
+        ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Importaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				DECLARE @UbicacionRelativaCompleta VARCHAR(100)
+				EXEC @UbicacionRelativaCompleta = ufc_UbicacionRelativaCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @TablaId = @TablaId
+				
+				SELECT * INTO #TempTable
+				FROM
+				(
+				   SELECT IMP.id
+						--,IMP.ContextoId
+						,U.Apellido + ', ' + U.Nombre + '(' + U.UserName + ')' AS Usuario
+						,T.Nombre AS Tabla
+						,IMP.Numero
+						,IMP.Fecha
+						,IMP.Observaciones
+						,IMP.ObservacionesPosteriores
+						--,IMP.Activo
+						,N'images/cbx/img_' + CONVERT(VARCHAR(5),IMP.Activo) + N'.jpg' AS imgActivo
+						,'/' + @UbicacionRelativaCompleta + '/' + REPLACE(IMG.Imagen, '.', '_th.') AS Imagen
+						,ROW_NUMBER() OVER 
+							(
+								ORDER BY 
+								CASE WHEN @OrdenarPor = '' THEN IMP.Fecha END DESC --DEFAULT
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Apellido END
+									,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Nombre END
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Apellido END DESC
+									,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '0' THEN T.Nombre END
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '1' THEN T.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '0' THEN IMP.Numero END
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '1' THEN IMP.Numero END DESC
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '0' THEN IMP.Fecha END
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '1' THEN IMP.Fecha END DESC
+							) 
+						AS NumeroDeRegistro
+					FROM Importaciones IMP
+						INNER JOIN Usuarios U ON IMP.UsuarioQueImportaId = U.id
+						INNER JOIN Tablas T ON IMP.TablaId = T.id
+						INNER JOIN Contextos CON ON IMP.ContextoId = CON.Id
+						OUTER APPLY ( 
+							SELECT TOP 1 ARCH.NombreFisicoCompleto AS Imagen
+							FROM Archivos ARCH 
+							WHERE ARCH.TablaId = @TablaId AND ARCH.RegistroId = IMP.Id AND ARCH.ExtensionDeArchivoId = 6
+							ORDER BY ARCH.Orden) IMG
+					WHERE 
+						(IMP.ContextoId = @ContextoId)
+						AND (IMP.Activo = @Activo OR @Activo IS NULL)
+						AND (IMP.TablaId = @TablaId OR @TablaId = '-1') -- FiltroDDL (FK)
+						--AND (Fecha BETWEEN @FechaDesde AND @FechaHasta) <-- No permite que una fecha de las dos sea NULL
+						AND (IMP.Fecha >= @FechaDesde OR @FechaDesde IS NULL)
+						AND (IMP.Fecha <= @FechaHasta OR @FechaHasta IS NULL)
+						AND
+						(
+							(@Filtro = '')
+							OR (U.Apellido + N', ' + U.Nombre LIKE '%' + @Filtro + '%')
+							OR (T.Nombre LIKE '%' + @Filtro + '%')
+							OR (IMP.Numero LIKE '%' + @Filtro + '%')
+							OR (IMP.Observaciones LIKE '%' + @Filtro + '%')
+							OR (IMP.ObservacionesPosteriores LIKE '%' + @Filtro + '%')
+						)			
+				) Query
+		
+				SELECT	id
+						,Usuario
+						,Tabla
+						,Numero
+						,Fecha
+						,Observaciones
+						,ObservacionesPosteriores
+						--,Activo
+						,imgActivo
+						,Imagen
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+				
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+    END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Importaciones__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_Importaciones__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_Importaciones__ListadoDDLoCBXL
+		@UsuarioQueEjecutaId							INT						
+		,@FechaDeEjecucion								DATETIME				
+		
+		,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+		,@Filtro                                        VARCHAR(50) = ''
+		,@Activo                                        BIT = NULL -- El modelo no tiene "Activo" pero lo pasamos por compatibilidad en los listadosDDL.
+		
+        ,@sResSQL										VARCHAR(1000)	OUTPUT
+    AS
+    BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Importaciones'
+			,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			
+		-- EN LOS DDL NO VALIDAMOS NADA: EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		SET @sResSQL = '' 
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				SELECT	 IMP.id
+						,CAST(IMP.Numero AS VARCHAR(MAX)) + ' - ' + SUBSTRING(IMP.Observaciones, 1, 10) + '...' AS Nombre
+				FROM Importaciones IMP
+				WHERE 
+					-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea. 
+					(IMP.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+					OR 
+					(
+						(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+						-- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+		 				AND (IMP.ContextoId = @ContextoId)
+						AND	(IMP.Activo = @Activo OR @Activo IS NULL)
+					)
+					AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id:
+					(
+						(@Filtro = '')
+						OR (IMP.Numero LIKE '%' + @Filtro + '%')
+						OR (IMP.Observaciones LIKE '%' + @Filtro + '%')
+					)
+				ORDER BY IMP.Numero
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Importaciones /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Informes - INICIO
+IF (OBJECT_ID('usp_Informes__Listado') IS NOT NULL) DROP PROCEDURE usp_Informes__Listado
+GO
+CREATE PROCEDURE usp_Informes__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''
+		
+		,@CategoriaDeInformeId		INT = '-1' -- FiltroDDL (FK)
+		,@FechaDeInformeDesde		DATE = NULL
+		,@FechaDeInformeHasta		DATE = NULL
+		,@Activo					BIT = NULL
+		
+		,@RegistrosPorPagina		INT = -1
+		,@NumeroDePagina			INT = 1
+		,@TotalDeRegistros			INT		OUTPUT
+				
+        ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Informes'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				
+				SELECT * INTO #TempTable
+				FROM
+				(
+				   SELECT INF.id 
+							,U.Apellido + N', ' + U.Nombre AS Usuario
+							,INF.Titulo 
+							,CDINF.Nombre AS Categoria
+							,INF.Texto
+							,INF.FechaDeInforme  
+							,INF.Activo
+							,(SELECT COUNT(id) FROM Archivos WHERE (TablaId = @TablaId AND RegistroId = INF.id)) AS CantidadDeAdjuntos
+							,ROW_NUMBER() OVER 
+								(
+									ORDER BY 
+									CASE WHEN @OrdenarPor = '' THEN INF.FechaDeInforme END DESC --DEFAULT
+									,CASE WHEN @OrdenarPor = 'FechaDeInforme' AND @Sentido = '0' THEN INF.FechaDeInforme END
+									,CASE WHEN @OrdenarPor = 'FechaDeInforme' AND @Sentido = '1' THEN INF.FechaDeInforme END DESC
+									,CASE WHEN @OrdenarPor = 'Titulo' AND @Sentido = '0' THEN INF.Titulo END
+									,CASE WHEN @OrdenarPor = 'Titulo' AND @Sentido = '1' THEN INF.Titulo END DESC
+									,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Apellido END
+										,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Nombre END
+									,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Apellido END DESC
+										,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Nombre END DESC
+									,CASE WHEN @OrdenarPor = 'Categoria' AND @Sentido = '0' THEN CDINF.Nombre END
+									,CASE WHEN @OrdenarPor = 'Categoria' AND @Sentido = '1' THEN CDINF.Nombre END DESC
+									,CASE WHEN @OrdenarPor = 'Texto' AND @Sentido = '0' THEN INF.Texto END
+									,CASE WHEN @OrdenarPor = 'Texto' AND @Sentido = '1' THEN INF.Texto END DESC
+								) 
+							AS NumeroDeRegistro			
+					FROM Informes INF
+						INNER JOIN Usuarios U ON INF.UsuarioId = U.id
+						INNER JOIN CategoriasDeInformes CDINF ON INF.CategoriaDeInformeId = CDINF.id
+					WHERE 
+						(INF.ContextoId = @ContextoId)
+						AND (INF.Activo = @Activo OR @Activo IS NULL)
+						AND (CategoriaDeInformeId = @CategoriaDeInformeId OR @CategoriaDeInformeId = '-1') -- FiltroDDL (FK)
+						AND (INF.FechaDeInforme >= @FechaDeInformeDesde OR @FechaDeInformeDesde IS NULL)
+						AND (INF.FechaDeInforme <= @FechaDeInformeHasta OR @FechaDeInformeHasta IS NULL)
+						AND
+						(
+							(@Filtro = '')
+							OR (U.Apellido + N', ' + U.Nombre LIKE '%' + @Filtro + '%')
+							OR (INF.Titulo LIKE '%' + @Filtro + '%')
+							OR (INF.Texto LIKE '%' + @Filtro + '%')
+						)
+				) Query
+		
+				SELECT	id
+						,Usuario
+						,Titulo
+						,Categoria
+						,Texto
+						,FechaDeInforme
+						,CantidadDeAdjuntos
+						,Activo
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = -1) -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+				
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+    END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Informes - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: LogEnviosDeCorreos /Listados/ - INICIO
+IF (OBJECT_ID('usp_LogEnviosDeCorreos__Listado') IS NOT NULL) DROP PROCEDURE usp_LogEnviosDeCorreos__Listado
+GO
+CREATE PROCEDURE usp_LogEnviosDeCorreos__Listado
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@OrdenarPor                                    VARCHAR(50) = ''
+	,@Sentido                                       BIT = '0'
+	,@Filtro                                        VARCHAR(50) = ''
+ 
+	,@Satisfactorio                                 BIT = NULL
+	,@FechaDesde                                    DATE = NULL
+	,@FechaHasta                                    DATE = NULL
+	,@EnvioDeCorreoId                               INT = '-1' -- FiltroDDL (FK)
+ 
+	,@RegistrosPorPagina                            INT = '-1'
+	,@NumeroDePagina                                INT = '1'
+	,@TotalDeRegistros                              INT		OUTPUT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogEnviosDeCorreos'
+		,@FuncionDePagina VARCHAR(30) = 'Listado'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			SELECT * INTO #TempTable
+			FROM
+				(
+					SELECT LEDC.id
+						,LEDC.EnvioDeCorreoId
+						,LEDC.Satisfactorio
+						,LEDC.Fecha
+						--,LEDC.ObservacionesDeRevision
+						,CAST(EDC.Asunto AS VARCHAR(MAX)) AS EnvioDeCorreo
+						--Otros:
+						,UO.Apellido + N', ' + UO.Nombre AS UsuarioOriginante
+						,UD.Apellido + N', ' + UD.Nombre AS UsuarioDestinatario
+						,EDC.EmailDeDestino
+						,T.Nombre AS Tabla
+						,ROW_NUMBER() OVER
+						(
+							-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+							ORDER BY
+								CASE WHEN @OrdenarPor = '' THEN LEDC.Fecha END DESC
+								,CASE WHEN @OrdenarPor = 'EnvioDeCorreoId' AND @Sentido = '0' THEN LEDC.EnvioDeCorreoId END
+								,CASE WHEN @OrdenarPor = 'EnvioDeCorreoId' AND @Sentido = '1' THEN LEDC.EnvioDeCorreoId END DESC
+								,CASE WHEN @OrdenarPor = 'Satisfactorio' AND @Sentido = '0' THEN LEDC.Satisfactorio END
+								,CASE WHEN @OrdenarPor = 'Satisfactorio' AND @Sentido = '1' THEN LEDC.Satisfactorio END DESC
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '0' THEN LEDC.Fecha END
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '1' THEN LEDC.Fecha END DESC
+								--,CASE WHEN @OrdenarPor = 'ObservacionesDeRevision' AND @Sentido = '0' THEN LEDC.ObservacionesDeRevision END
+								--,CASE WHEN @OrdenarPor = 'ObservacionesDeRevision' AND @Sentido = '1' THEN LEDC.ObservacionesDeRevision END DESC
+								,CASE WHEN @OrdenarPor = 'EnvioDeCorreo' AND @Sentido = '0' THEN EDC.Asunto END
+								,CASE WHEN @OrdenarPor = 'EnvioDeCorreo' AND @Sentido = '1' THEN EDC.Asunto END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioOriginante' AND @Sentido = '0' THEN UO.Apellido END
+								,CASE WHEN @OrdenarPor = 'UsuarioOriginante' AND @Sentido = '0' THEN UO.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioOriginante' AND @Sentido = '1' THEN UO.Apellido END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioOriginante' AND @Sentido = '1' THEN UO.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '0' THEN UD.Apellido END
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '0' THEN UD.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '1' THEN UD.Apellido END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '1' THEN UD.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'EmailDeDestino' AND @Sentido = '0' THEN EDC.EmailDeDestino END
+								,CASE WHEN @OrdenarPor = 'EmailDeDestino' AND @Sentido = '1' THEN EDC.EmailDeDestino END DESC
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '0' THEN T.Nombre END
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '0' THEN LEDC.Fecha END
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '1' THEN T.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '1' THEN LEDC.Fecha END DESC
+						) AS NumeroDeRegistro
+					FROM LogEnviosDeCorreos AS LEDC
+						INNER JOIN EnviosDeCorreos EDC ON EDC.id = LEDC.EnvioDeCorreoId
+						INNER JOIN Tablas T ON EDC.TablaId = T.id
+						INNER JOIN Usuarios UO ON EDC.UsuarioOriginanteId = UO.id
+						INNER JOIN Usuarios UD ON EDC.UsuarioDestinatarioId = UD.id
+					WHERE
+						(LEDC.id > '0') -- No es necesario, pero para mantener estructura de los "AND" Siguientes.
+						AND (LEDC.Satisfactorio = @Satisfactorio OR @Satisfactorio IS NULL)
+						AND (LEDC.Fecha >= @FechaDesde OR @FechaDesde IS NULL)
+						AND (LEDC.Fecha <= @FechaHasta OR @FechaHasta IS NULL)
+						AND (LEDC.EnvioDeCorreoId = @EnvioDeCorreoId OR @EnvioDeCorreoId = '-1') -- FiltroDDL (FK)
+						AND
+						(
+							(@Filtro = '')
+							OR (LEDC.EnvioDeCorreoId LIKE '%' + @Filtro + '%')
+							OR (LEDC.Satisfactorio LIKE '%' + @Filtro + '%')
+							OR (LEDC.Fecha LIKE '%' + @Filtro + '%')
+							--OR (LEDC.ObservacionesDeRevision LIKE '%' + @Filtro + '%')
+							OR (EDC.Asunto LIKE '%' + @Filtro + '%')
+							OR (UO.Apellido LIKE '%' + @Filtro + '%')
+							OR (UO.Nombre LIKE '%' + @Filtro + '%')
+							OR (UD.Apellido LIKE '%' + @Filtro + '%')
+							OR (UD.Nombre LIKE '%' + @Filtro + '%')
+							OR (EDC.EmailDeDestino LIKE '%' + @Filtro + '%')
+							OR (T.Nombre LIKE '%' + @Filtro + '%')
+						)
+			) Query
+ 
+		SELECT *
+		FROM  #TempTable
+			WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación:
+ 
+			SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+			DROP TABLE #TempTable
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_LogEnviosDeCorreos__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_LogEnviosDeCorreos__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_LogEnviosDeCorreos__ListadoDDLoCBXL
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+	,@Activo                                        BIT = NULL -- El modelo no tiene "Activo" pero lo pasamos por compatibilidad en los listadosDDL.
+ 
+	,@EnvioDeCorreoId                               INT = '-1' -- FiltroDDL (FK)
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogEnviosDeCorreos'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			SELECT LEDC.id
+				,LEDC.Fecha
+			FROM LogEnviosDeCorreos AS LEDC
+			WHERE 
+				-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(LEDC.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR 
+				(	
+					(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					-- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					AND (LEDC.EnvioDeCorreoId = @EnvioDeCorreoId OR @EnvioDeCorreoId = '-1') -- FiltroDDL (FK)
+				)
+				AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id:
+				(
+					(@Filtro = '')
+					OR (LEDC.Fecha LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY LEDC.Fecha
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: LogEnviosDeCorreos /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Notificaciones /Listados/ - INICIO
+IF (OBJECT_ID('usp_Notificaciones__Listado') IS NOT NULL) DROP PROCEDURE usp_Notificaciones__Listado
+GO
+CREATE PROCEDURE usp_Notificaciones__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''		
+		,@Activo					BIT = NULL
+		
+		,@RegistrosPorPagina		INT = '-1'
+		,@NumeroDePagina			INT = 1
+		--,@TotalDeRegistros			INT		OUTPUT
+		
+		,@sResSQL					VARCHAR(1000)			OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Notificaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validará contra la rtabla: @Tabla
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				SELECT * INTO #TempTable
+				FROM 
+				(
+					SELECT 	N.Id
+						,N.Fecha
+						,N.UsuarioDestinatarioId
+						,N.TablaId
+						,N.RegistroId
+						,N.Cuerpo
+						,I.CSS AS Icono
+						,CASE WHEN DATEDIFF(MINUTE, N.Fecha, @FechaDeEjecucion) < 60 THEN CAST(DATEDIFF(MINUTE, N.Fecha, @FechaDeEjecucion) AS VARCHAR(MAX)) + 'm' 
+							  WHEN DATEDIFF(HOUR, N.Fecha, @FechaDeEjecucion) < 24 THEN CAST(DATEDIFF(HOUR, N.Fecha, @FechaDeEjecucion) AS VARCHAR(MAX)) + 'h' 
+							  ELSE CAST(DATEDIFF(DAY, N.Fecha, @FechaDeEjecucion) AS VARCHAR(MAX)) + 'd' 
+						END AS Antiguedad
+						,N.Leida
+						,TAB.Nombre AS Tabla
+						,N'images/cbx/img_' + CONVERT(VARCHAR(5),N.Activo) + N'.jpg' AS imgActivo
+						,ROW_NUMBER() OVER 
+							(
+								ORDER BY 
+								CASE WHEN @OrdenarPor = '' THEN N.Fecha END DESC --DEFAULT
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '0' THEN N.Fecha END
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '1' THEN N.Fecha END DESC
+							) 
+						AS NumeroDeRegistro
+					FROM Notificaciones N
+						INNER JOIN Tablas TAB ON N.TablaId = TAB.id
+						INNER JOIN IconosCSS I ON N.IconoCSSId = I.id
+					WHERE 
+						(N.UsuarioDestinatarioId = @UsuarioQueEjecutaId)
+						AND (N.ContextoId = @ContextoId)
+						AND (N.Activo = @Activo OR @Activo IS NULL)
+						AND
+						(
+							(@Filtro = '')
+							OR (N.Cuerpo LIKE '%' + @Filtro + '%')
+						)
+					) Query
+		
+				SELECT	id
+						,Fecha
+						,UsuarioDestinatarioId
+						,TablaId
+						,RegistroId
+						,Cuerpo
+						,Icono
+						,Antiguedad
+						,Leida
+						,Tabla
+						,imgActivo
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+
+				--SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Notificaciones /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Publicaciones /Listados/ - INICIO
+IF (OBJECT_ID('usp_Publicaciones__Listado') IS NOT NULL) DROP PROCEDURE usp_Publicaciones__Listado
+GO
+CREATE PROCEDURE usp_Publicaciones__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''
+		,@Activo					BIT = NULL		
+		,@Realizada					BIT = NULL
+		
+	    ,@RegistrosPorPagina		INT = '-1'
+		,@NumeroDePagina			INT = 1
+		,@TotalDeRegistros			INT		OUTPUT
+				
+        ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Publicaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				--DECLARE @ContextoId	INT
+				--EXEC	@ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+				
+				SELECT * INTO #TempTable
+				FROM 
+				(	
+					SELECT	PUB.id
+						,PUB.Fecha
+						--,Activo
+						,CAST(PUB.Hora AS CHAR(5)) AS Hora
+						,PUB.Titulo
+						,PUB.NumeroDeVersion
+						--,Realizada
+						,COALESCE(STUFF((SELECT ', ' + 'Nº ' + CAST(SOP.Numero AS VARCHAR(MAX))
+							FROM Soportes SOP
+							WHERE SOP.PublicacionId = PUB.id FOR XML PATH('')),1,1,''), '-') AS Soportes
+						,COALESCE(STUFF((SELECT ', ' + SS.Nombre
+							FROM RelAsig_Subsistemas_A_Publicaciones RASaP
+								INNER JOIN SubSistemas SS ON RASaP.SubsistemaId = SS.id
+							WHERE RASaP.PublicacionId = PUB.id FOR XML PATH('')),1,1,''), '-') AS SubSistemas
+						,N'images/cbx/img_' + CONVERT(VARCHAR(5), Realizada) + N'.jpg' AS imgRealizada
+						--,CAST(PUB.Observaciones AS VARCHAR(80)) + N' ...' AS Observaciones_Cortadas
+						,PUB.Observaciones
+						,ROW_NUMBER() OVER 
+							(
+								ORDER BY 
+								CASE WHEN @OrdenarPor = '' THEN PUB.Fecha END DESC -- DEFAULT
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '0' THEN PUB.Fecha END
+								,CASE WHEN @OrdenarPor = 'Fecha' AND @Sentido = '1' THEN PUB.Fecha END DESC
+								,CASE WHEN @OrdenarPor = 'Título' AND @Sentido = '0' THEN PUB.Titulo END
+								,CASE WHEN @OrdenarPor = 'Título' AND @Sentido = '1' THEN PUB.Titulo END DESC
+								,CASE WHEN @OrdenarPor = 'Número de versión' AND @Sentido = '0' THEN PUB.NumeroDeVersion END
+								,CASE WHEN @OrdenarPor = 'Número de versión' AND @Sentido = '1' THEN PUB.NumeroDeVersion END DESC
+								,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '0' THEN PUB.Observaciones END
+								,CASE WHEN @OrdenarPor = 'Observaciones' AND @Sentido = '1' THEN PUB.Observaciones END DESC
+							) 
+						AS NumeroDeRegistro
+				FROM Publicaciones PUB
+					INNER JOIN RelAsig_Subsistemas_A_Publicaciones RASaP ON RASaP.PublicacionId = PUB.id
+				WHERE 
+					(PUB.Realizada = @Realizada OR @Realizada IS NULL)
+					AND(PUB.Activo = @Activo OR @Activo IS NULL)
+					AND
+					(
+						(@Filtro = '')
+						OR (PUB.Titulo LIKE '%' + @Filtro + '%')
+						OR (PUB.NumeroDeVersion LIKE '%' + @Filtro + '%')
+						OR (PUB.Observaciones LIKE '%' + @Filtro + '%')
+					)
+				) Query
+		
+				SELECT	id
+						,Fecha
+						,Hora
+						,Titulo
+						,NumeroDeVersion
+						,Soportes
+						,SubSistemas
+						,imgRealizada
+						,Observaciones
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END	
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Publicaciones /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /Listados/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__Listado') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Listado
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Listado
+		@UsuarioQueEjecutaId							INT						
+		,@FechaDeEjecucion								DATETIME				
+		,@Token                                         VARCHAR(40) = ''
+ 
+		,@OrdenarPor									VARCHAR(50) = ''
+		,@Sentido										BIT = 0
+		,@Filtro										VARCHAR(50) = ''		
+		--,@Activo										BIT = NULL -- NO TIENE, Solo por compatibilidad
+		
+		,@RolDeUsuarioId								INT = '-1' -- FiltroDDL (FK)
+		,@PaginaId										INT = '-1' -- FiltroDDL (FK)
+		,@AutorizadoA_CargarLaPagina					BIT = NULL
+		,@AutorizadoA_OperarLaPagina					BIT = NULL
+		,@AutorizadoA_VerRegAnulados					BIT = NULL
+		,@AutorizadoA_AccionesEspeciales				BIT = NULL
+		,@TablaId										INT = '-1' -- FiltroDDL (FK)
+		
+		,@RegistrosPorPagina							INT = '-1'
+		,@NumeroDePagina								INT = '1'
+		,@TotalDeRegistros								INT		OUTPUT
+				
+        ,@sResSQL										VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+		-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+		IF @sResSQL = ''
+			BEGIN
+				SELECT * INTO #TempTable
+				FROM 
+				(
+					SELECT RPRP.id 
+						,RDU.Nombre AS RolDeUsuario
+						,PAG.Nombre AS Pagina
+						,RPRP.AutorizadoA_CargarLaPagina AS AutorizadoA_CargarLaPagina
+						,RPRP.AutorizadoA_OperarLaPagina AS AutorizadoA_OperarLaPagina
+						,RPRP.AutorizadoA_VerRegAnulados AS AutorizadoA_VerRegAnulados
+						,RPRP.AutorizadoA_AccionesEspeciales AS AutorizadoA_AccionesEspeciales
+						,ROW_NUMBER() OVER 
+							(
+								-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+								ORDER BY  
+									CASE WHEN @OrdenarPor = '' THEN RDU.Nombre END --DEFAULT
+									,CASE WHEN @OrdenarPor = 'RolDeUsuario' AND @Sentido = '0' THEN RDU.Nombre END
+									,CASE WHEN @OrdenarPor = 'RolDeUsuario' AND @Sentido = '1' THEN RDU.Nombre END DESC
+									,CASE WHEN @OrdenarPor = 'Pagina' AND @Sentido = '0' THEN PAG.Nombre END
+									,CASE WHEN @OrdenarPor = 'Pagina' AND @Sentido = '1' THEN PAG.Nombre END DESC
+							) AS NumeroDeRegistro
+					FROM RelAsig_RolesDeUsuarios_A_Paginas RPRP
+						INNER JOIN RolesDeUsuarios RDU ON RPRP.RolDeUsuarioId = RDU.id
+						INNER JOIN Paginas PAG ON RPRP.PaginaId = PAG.id
+					WHERE 
+						--(	RDU.id NOT IN(SELECT id FROM ufc_IdsString_ToTable_INT(@IdsString_ExclusionesDe_RolesDeUsuarios))) 
+						--AND
+						(RPRP.RolDeUsuarioId = @RolDeUsuarioId OR @RolDeUsuarioId = '-1') -- FiltroDDL (FK)
+						AND (RPRP.PaginaId = @PaginaId OR @PaginaId = '-1') -- FiltroDDL (FK)
+						AND (RPRP.AutorizadoA_CargarLaPagina = @AutorizadoA_CargarLaPagina OR @AutorizadoA_CargarLaPagina IS NULL)
+						AND (RPRP.AutorizadoA_OperarLaPagina = @AutorizadoA_OperarLaPagina OR @AutorizadoA_OperarLaPagina IS NULL)
+						AND (RPRP.AutorizadoA_VerRegAnulados = @AutorizadoA_VerRegAnulados OR @AutorizadoA_VerRegAnulados IS NULL)
+						AND (RPRP.AutorizadoA_AccionesEspeciales = @AutorizadoA_AccionesEspeciales OR @AutorizadoA_AccionesEspeciales IS NULL)
+						AND	(PAG.TablaId = @TablaId OR @TablaId = '-1') -- FiltroDDL (FK)
+						AND
+						(
+							(@Filtro = '')
+							OR (RDU.Nombre LIKE '%' + @Filtro + '%')
+							OR (PAG.Nombre LIKE '%' + @Filtro + '%')
+						)
+				) Query
+				
+				SELECT	*
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId /Listados/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+		
+		,@UsuarioId					INT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				SELECT RARU.id 
+					,RDU.id AS RolDeUsuarioId
+					,RDU.Nombre AS Rol
+					,(CASE WHEN RARU.UsuarioId = @UsuarioId AND (RARU.FechaHasta >= @FechaDeEjecucion OR RARU.FechaHasta IS NULL) THEN 1
+						ELSE 0 END) AS Asignado
+					,(CASE WHEN RARU.UsuarioId = @UsuarioId AND (RARU.FechaHasta >= @FechaDeEjecucion OR RARU.FechaHasta IS NULL) THEN dbo.ufc_FormatoFecha(RARU.FechaDesde)
+						ELSE NULL END) AS FechaDesde
+					,(CASE WHEN RARU.UsuarioId = @UsuarioId AND (RARU.FechaHasta >= @FechaDeEjecucion OR RARU.FechaHasta IS NULL) THEN dbo.ufc_FormatoFecha(RARU.FechaHasta)
+						ELSE NULL END) AS FechaHasta
+					,RDU.SeMuestraEnAsignacionDePermisos AS PermiteEdicion
+					--,dbo.ufc_FormatoFecha(RARU.FechaDesde) AS FechaDesde
+					--,dbo.ufc_FormatoFecha(RARU.FechaHasta) AS FechaHasta
+				FROM RolesDeUsuarios RDU 
+					LEFT JOIN RelAsig_RolesDeUsuarios_A_Usuarios RARU ON RARU.RolDeUsuarioId = RDU.id AND RARU.UsuarioId = @UsuarioId
+				WHERE (RDU.Activo = 1)
+					AND (RDU.SeMuestraEnAsignacionDePermisos = 1)
+					AND
+					(
+						--SI ES UN ROL QUE ESTARÁ ACTIVO EN EL FUTURO LO MUESTRO TAMBIEN
+						--NO VALIDO QUE LA FECHA DE INICIO SEA MENOR A LA FECHA ACTUAL
+							--RARU.FechaDesde <= @FechaDeEjecucion
+						--AND 
+						(RARU.FechaHasta >= @FechaDeEjecucion OR RARU.FechaHasta IS NULL)
+						OR (RARU.id IS NULL)
+					)
+					--AND
+					--(
+					--	RDU.id <> dbo.ufc_RolDeUsuario_MasterAdmin() 
+					--	OR (SELECT id FROM RelAsig_RolesDeUsuarios_A_Usuarios 
+					--		WHERE RolDeUsuarioId = dbo.ufc_RolDeUsuario_MasterAdmin()  
+					--			AND UsuarioId = @UsuarioQueEjecutaId
+					--		)  IS NOT NULL
+					--)	
+				--	ORDER BY RDU.Nombre // Si lo ordenamos x nombre, no funca el asignar rol
+				ORDER BY RDU.id
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: usp_RelAsig_RolesDeUsuarios_A_Usuarios__Listado_by_@UsuarioId /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: usp_RelAsig_Usuarios_A_Recursos__Listado_by_@RecursoId /Listados/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_Usuarios_A_Recursos__Listado_by_@RecursoId') IS NOT NULL) DROP PROCEDURE usp_RelAsig_Usuarios_A_Recursos__Listado_by_@RecursoId
+GO
+CREATE PROCEDURE usp_RelAsig_Usuarios_A_Recursos__Listado_by_@RecursoId
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+		
+		,@RecursoId					INT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_Usuarios_A_Recursos'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				SELECT 
+						U.id
+						,U.Apellido + ', ' + U.Nombre AS NombreCompleto
+						,U.UserName
+						,U.Nombre
+						,U.Apellido
+						,U.Email
+						,U.Activo
+					
+				FROM Usuarios U 
+					INNER JOIN RelAsig_Usuarios_A_Recursos RAUR ON RAUR.RecursoId = @RecursoId AND RAUR.UsuarioId = U.id
+				WHERE (U.Activo = 1)
+				ORDER BY U.Apellido
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: usp_RelAsig_Usuarios_A_Recursos__Listado_by_@RecursoId /Listados/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_TiposDeContactos_A_Contextos /Listados/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_TiposDeContactos_A_Contextos__Listado') IS NOT NULL) DROP PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Listado
+GO
+CREATE PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Listado
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@OrdenarPor                                    VARCHAR(50) = ''
+	,@Sentido                                       BIT = '0'
+	,@Filtro                                        VARCHAR(50) = ''
+ 
+	,@TipoDeContactoId                              INT = '-1' -- FiltroDDL (FK)
+ 
+	,@RegistrosPorPagina                            INT = '-1'
+	,@NumeroDePagina                                INT = '1'
+	,@TotalDeRegistros                              INT		OUTPUT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_TiposDeContactos_A_Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Listado'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT * INTO #TempTable
+			FROM
+				(
+					-- ACÁ LA LOGICA PARA APLICAR ES DISITNTA, NOS APOYAMOS EN TiposDeontactos y hacemos LEFT JOIN a la Rel
+					
+					SELECT TDC.id
+						,TDC.Nombre
+						,(CASE WHEN (SELECT id FROM RelAsig_TiposDeContactos_A_Contextos WHERE TipoDeContactoId = TDC.id AND ContextoId = @ContextoId) IS NULL THEN 0
+							ELSE 1 END) AS Asignado
+						,ROW_NUMBER() OVER
+						(
+							-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+							ORDER BY
+								CASE WHEN @OrdenarPor = '' THEN TDC.Nombre END 
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '0' THEN TDC.Nombre END
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '1' THEN TDC.Nombre END DESC
+						) AS NumeroDeRegistro
+					FROM TiposDeContactos AS TDC
+						--LEFT JOIN RelAsig_TiposDeContactos_A_Contextos ATCAC ON ATCAC.TipoDeContactoId = TDC.id
+						--INNER JOIN Contextos CX ON CX.id = ATCAC.ContextoId // LISTAMOS LOS DE TODOS LOS CONTEXTOS PARA Q LUEGO PUEDA SELECCIONAR A CUAL SE ASIGNA.
+					WHERE
+						(TDC.id > '0') -- No es necesario, pero para mantener estructura de los "AND" Siguientes.
+						--AND (ATCAC.ContextoId = @ContextoId OR @ContextoId = '-1') // LISTAMOS LOS DE TODOS LOS CONTEXTOS PARA Q LUEGO PUEDA SELECCIONAR A CUAL SE ASIGNA.
+						AND (TDC.id = @TipoDeContactoId OR @TipoDeContactoId = '-1') -- FiltroDDL (FK)
+						AND
+						(
+							(@Filtro = '')
+							OR (TDC.Nombre LIKE '%' + @Filtro + '%')
+						)
+			) Query
+ 
+		SELECT *
+		FROM  #TempTable
+			WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+ 
+			SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+			DROP TABLE #TempTable
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_RelAsig_TiposDeContactos_A_Contextos__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__ListadoDDLoCBXL
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+	,@Activo                                        BIT = NULL -- El modelo no tiene "Activo" pero lo pasamos por compatibilidad en los listadosDDL.
+ 
+	,@TipoDeContactoId                              INT = '-1' -- FiltroDDL (FK)
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_TiposDeContactos_A_Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT ATCAC.id
+				,TDC.Nombre
+			FROM RelAsig_TiposDeContactos_A_Contextos AS ATCAC
+				INNER JOIN Contextos CX ON CX.id = ATCAC.ContextoId
+				INNER JOIN TiposDeContactos TDC ON TDC.id = ATCAC.TipoDeContactoId
+			WHERE 
+				-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(ATCAC.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR 
+				(	
+					(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					 -- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					 AND (ATCAC.TipoDeContactoId = @TipoDeContactoId OR @TipoDeContactoId = '-1') -- FiltroDDL (FK)
+					 AND (ATCAC.ContextoId = @ContextoId OR @ContextoId = '-1')
+				)
+				AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id: 
+				(
+					(@Filtro = '')
+					OR (TDC.Nombre LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY TDC.Nombre
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_TiposDeContactos_A_Contextos /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Soportes /Listados/ - INICIO
+IF (OBJECT_ID('usp_Soportes__Listado') IS NOT NULL) DROP PROCEDURE usp_Soportes__Listado
+GO
+CREATE PROCEDURE usp_Soportes__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''		
+		
+		,@Activo					BIT = NULL
+		,@EstadoDeSoporteId			INT = '-1' -- FiltroDDL (FK)
+		,@PrioridadDeSoporteId		INT = '-1' -- FiltroDDL (FK)
+		,@Cerrado					BIT = NULL
+		,@FechaDesde				DATETIME = NULL
+		,@FechaHasta				DATETIME = NULL
+		
+		,@RegistrosPorPagina		INT = '-1'
+		,@NumeroDePagina			INT = 1
+		,@TotalDeRegistros			INT		OUTPUT	
+			
+        ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				DECLARE @Tabla_SoportesId INT = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+				
+				SELECT * INTO #TempTable
+				FROM
+				(
+				   SELECT  SOP.id 
+						,U.Apellido + N', ' + U.Nombre AS UsuarioQueCreo
+						,CASE WHEN SOP.UsuarioQueCerroId = 0 THEN NULL ELSE U2.Apellido + N', ' + U2.Nombre END AS UsuarioQueCerro
+						,U3.Apellido + N', ' + U3.Nombre AS UsuarioQueSolicita
+						,SOP.FechaDeEjecucion
+						,SOP.FechaDeCierre
+						,SOP.Numero
+						,SOP.Texto
+						,EDSOP.Nombre AS Estado
+						,PRI.Nombre AS Prioridad
+						,SOP.Activo
+						,N'images/cbx/imgRealizado_' + CONVERT(VARCHAR(5), SOP.Cerrado) + N'.png' AS img_Cerrado
+						,N'images/cbx/img_' + CONVERT(VARCHAR(5),SOP.Activo) + N'.jpg' AS imgActivo
+						,REPLACE(REPLACE(SOP.Cerrado, '1', 'Pedido Cerrado'), '0', 'Pedido Pendiente') AS TextoCerrado  -- Va como Tooltip
+						,(CASE WHEN PUBLI.NumeroDeVersion IS NULL THEN '' ELSE PUBLI.NumeroDeVersion END) AS Publicacion
+						,ROW_NUMBER() OVER 
+							(
+								ORDER BY 
+								CASE WHEN @OrdenarPor = '' THEN SOP.FechaDeEjecucion END DESC --DEFAULT
+								,CASE WHEN @OrdenarPor = 'UsuarioQueSolicita' AND @Sentido = '0' THEN U3.Apellido END
+									,CASE WHEN @OrdenarPor = 'UsuarioQueSolicita' AND @Sentido = '0' THEN U3.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioQueSolicita' AND @Sentido = '1' THEN U3.Apellido END DESC
+									,CASE WHEN @OrdenarPor = 'UsuarioQueSolicita' AND @Sentido = '1' THEN U3.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'FechaDeEjecucion' AND @Sentido = '0' THEN SOP.FechaDeEjecucion END
+								,CASE WHEN @OrdenarPor = 'FechaDeEjecucion' AND @Sentido = '1' THEN SOP.FechaDeEjecucion END DESC
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '0' THEN SOP.Numero END
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '1' THEN SOP.Numero END DESC
+								,CASE WHEN @OrdenarPor = 'EstadoDeSoportes' AND @Sentido = '0' THEN EDSOP.Nombre END
+								,CASE WHEN @OrdenarPor = 'EstadoDeSoportes' AND @Sentido = '1' THEN EDSOP.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Prioridad' AND @Sentido = '0' THEN PRI.Nombre END
+								,CASE WHEN @OrdenarPor = 'Prioridad' AND @Sentido = '1' THEN PRI.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'FechaDeCierre' AND @Sentido = '0' THEN SOP.FechaDeCierre END
+								,CASE WHEN @OrdenarPor = 'FechaDeCierre' AND @Sentido = '1' THEN SOP.FechaDeCierre END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioQueCerro' AND @Sentido = '0' THEN U2.Apellido END
+									,CASE WHEN @OrdenarPor = 'UsuarioQueCerro' AND @Sentido = '0' THEN U2.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioQueCerro' AND @Sentido = '1' THEN U2.Apellido END DESC
+									,CASE WHEN @OrdenarPor = 'UsuarioQueCerro' AND @Sentido = '1' THEN U2.Nombre END DESC
+							) 
+						AS NumeroDeRegistro
+					FROM Soportes SOP
+						INNER JOIN LogRegistros LREG ON LREG.TablaId = @Tabla_SoportesId AND LREG.RegistroId = SOP.id AND LREG.TipoDeOperacionId = 2 -- 2:CREADO
+						INNER JOIN Usuarios U ON LREG.UsuarioQueEjecutaId = U.id
+						INNER JOIN Usuarios U2 ON SOP.UsuarioQueCerroId = U2.id
+						INNER JOIN Usuarios U3 ON SOP.UsuarioQueSolicitaId = U3.id
+						INNER JOIN EstadosDeSoportes EDSOP ON SOP.EstadoDeSoportesId = EDSOP.id
+						INNER JOIN PrioridadesDeSoportes PRI ON SOP.PrioridadDeSoporteId = PRI.id
+						LEFT JOIN Publicaciones PUBLI ON SOP.PublicacionId = PUBLI.id
+					WHERE 
+						(SOP.Activo = @Activo OR @Activo IS NULL)
+						AND (SOP.ContextoId = @ContextoId)
+						AND (SOP.EstadoDeSoportesId = @EstadoDeSoporteId OR @EstadoDeSoporteId = '-1') -- FiltroDDL (FK)
+						AND (SOP.PrioridadDeSoporteId = @PrioridadDeSoporteId OR @PrioridadDeSoporteId = '-1') -- FiltroDDL (FK)
+						AND (SOP.Cerrado = @Cerrado OR @Cerrado IS NULL)
+						AND (SOP.FechaDeEjecucion > @FechaDesde OR @FechaDesde IS NULL)
+						AND (SOP.FechaDeEjecucion < @FechaHasta OR @FechaHasta IS NULL)
+						AND
+						(
+							(@Filtro = '')
+							OR (SOP.Numero LIKE '%' + @Filtro + '%')
+							OR (U.Apellido + N', ' + U.Nombre LIKE '%' + @Filtro + '%')
+							OR (U2.Apellido + N', ' + U2.Nombre LIKE '%' + @Filtro + '%')
+							OR (U3.Apellido + N', ' + U3.Nombre LIKE '%' + @Filtro + '%')
+							OR (SOP.Texto LIKE '%' + @Filtro + '%')
+							OR (SOP.Observaciones LIKE '%' + @Filtro + '%')
+							OR (PRI.Nombre LIKE '%' + @Filtro + '%')
+						)
+				) Query
+		
+				SELECT	id 
+						,UsuarioQueCreo
+						,UsuarioQueSolicita
+						,UsuarioQueCerro
+						,FechaDeEjecucion
+						,FechaDeCierre
+						,Numero
+						,Texto
+						,Estado
+						,Prioridad
+						,img_Cerrado
+						,imgActivo
+						,TextoCerrado  -- Va como Tooltip
+						,Publicacion
+						,Activo
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+				
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+    END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+--IF (OBJECT_ID('usp_Soportes__ListadoDDLoCBXL_by_@PublicacionId') IS NOT NULL) DROP PROCEDURE usp_Soportes__ListadoDDLoCBXL_by_@PublicacionId
+--GO
+--CREATE PROCEDURE usp_Soportes__ListadoDDLoCBXL_by_@PublicacionId
+--		@UsuarioQueEjecutaId		INT						
+--		,@FechaDeEjecucion			DATETIME				
+		
+--		,@Activo					BIT = NULL -- Aunque no tenga, lo agregamos por compatibilidad.
+--		,@id						INT = 0 -- Default, Si pasa un id, lo agregamos al SELECT.
+	 
+--		,@sResSQL					VARCHAR(1000)	OUTPUT	
+--	AS 
+--	BEGIN TRY
+--		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+--			,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+--			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+--			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			
+--		-- EN LOS DDL NO VALIDAMOS NADA: EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+--		SET @sResSQL = '' 
+
+--		IF @sResSQL = ''
+--			BEGIN
+--				DECLARE @ContextoId	INT
+--				EXEC	@ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+				
+--				-- Listo todas los Soportes Cerrados, TODOS, Pero solo marco chk=1 los que son de esta publicación.
+--				SELECT	SOP.id
+--						--CASE WHEN SOP.PublicacionId IS NULL THEN 0
+--						-- WHEN SOP.PublicacionId = @PublicacionId THEN 1
+--						,CASE WHEN NOT SOP.PublicacionId IS NULL AND SOP.PublicacionId = @PublicacionId THEN 1
+--								ELSE 0 END AS chk
+--						,N'Nº ' + CAST(SOP.Numero AS VARCHAR(MAX)) 
+--							+ N' - Pedido: ' + SOP.Texto + N'<br><br>'
+--							+ N' - Respuesta: ' + SOP.Observaciones + N'<br><br>' AS Data
+--						,SOP.Numero AS Orden
+--				FROM Soportes SOP
+--				WHERE 
+--					(SOP.Cerrado = 1)
+--					AND (SOP.ContextoId = @ContextoId)
+--					AND
+--					(
+--						(SOP.PublicacionId IS NULL)
+--						OR 
+--						(SOP.PublicacionId = @PublicacionId)
+--					)
+--				ORDER BY chk DESC, SOP.FechaDeCierre
+--			END	
+--	END TRY
+--	BEGIN CATCH
+--		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+--		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+--			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+--			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+--	END CATCH
+--GO
+
+
+
+			   
+--IF (OBJECT_ID('usp_Soportes__ListadoDDLoCBXL_ParaPublicaciones') IS NOT NULL) DROP PROCEDURE usp_Soportes__ListadoDDLoCBXL_ParaPublicaciones
+--GO
+--CREATE PROCEDURE usp_Soportes__ListadoDDLoCBXL_ParaPublicaciones
+--		@UsuarioQueEjecutaId		INT						
+--		,@FechaDeEjecucion			DATETIME				
+		
+--		,@sResSQL					VARCHAR(1000)	OUTPUT
+--	AS
+--	BEGIN TRY
+--		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+--			,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+--			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+--			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			
+--		-- EN LOS DDL NO VALIDAMOS NADA: EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+--		SET @sResSQL = '' 
+
+--		IF @sResSQL = ''
+--			BEGIN
+--				DECLARE @ContextoId	INT
+--				EXEC	@ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+								
+--				SELECT	id
+--					,N'Nº ' + CAST(SOP.Numero AS VARCHAR(MAX)) 
+--						+ N' - Pedido: ' + SOP.Texto + N'<br><br>'
+--						+ N' - Respuesta: ' + SOP.Observaciones + N'<br><br>' AS Data
+--					,SOP.Numero AS Orden
+--				FROM Soportes SOP
+--				WHERE 
+--					(SOP.Cerrado = 1)
+--					AND (SOP.ContextoId = @ContextoId)
+--					AND (SOP.PublicacionId IS NULL)
+--				ORDER BY SOP.FechaDeCierre
+--			END
+--	END TRY
+--	BEGIN CATCH
+--		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+--		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+--			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+--			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+--	END CATCH
+--GO
+-- SP-TABLA: Soportes /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: Tareas /Listados/ - INICIO
+IF (OBJECT_ID('usp_Tareas__Listado') IS NOT NULL) DROP PROCEDURE usp_Tareas__Listado
+GO
+CREATE PROCEDURE usp_Tareas__Listado
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		,@OrdenarPor				VARCHAR(50) = ''
+		,@Sentido					BIT = 0
+		,@Filtro					VARCHAR(50) = ''		
+		
+		,@Activo					BIT = NULL
+		,@TipoDeTareaId				INT = '-1' -- FiltroDDL (FK)
+		,@IdsString_EstadosDeTareas VARCHAR(100) = '-1' --@EstadoDeTareaId			INT = '-1' -- FiltroDDL (FK)
+		,@ImportanciaDeTareaId		INT = '-1' -- FiltroDDL (FK)
+		,@TablaDelRegistro			VARCHAR(80) = ''
+		,@FechaInicioDesde			DATETIME = NULL
+		,@FechaInicioHasta			DATETIME = NULL
+		,@FechaLimiteDesde			DATETIME = NULL
+		,@FechaLimiteHasta			DATETIME = NULL
+		
+		,@RegistrosPorPagina		INT = '-1'
+		,@NumeroDePagina			INT = 1
+		,@TotalDeRegistros			INT		OUTPUT	
+			
+        ,@sResSQL					VARCHAR(1000)	OUTPUT
+    AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Tareas'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+				
+				DECLARE @TablaId INT = COALESCE((SELECT id FROM Tablas WHERE Nombre = @TablaDelRegistro), -1)
+				
+				SELECT * INTO #TempTable
+				FROM
+				(
+				   SELECT  TA.id 
+						,UI.Apellido + N', ' + UI.Nombre AS UsuarioInteresado
+						,UD.Apellido + N', ' + UD.Nombre AS UsuarioDestinatario
+						,TA.FechaDeInicio
+						,TA.FechaLimite
+						,TA.Numero
+						,TDT.Nombre AS TipoDeTaread
+						,EDT.Nombre AS EstadoDeTarea
+						,TA.Titulo
+						,IDT.Nombre AS ImportanciaDeTarea
+						,T.Nombre AS Tabla
+						,ROW_NUMBER() OVER 
+							(
+								ORDER BY 
+								CASE WHEN @OrdenarPor = '' THEN TA.FechaLimite END DESC --DEFAULT
+								,CASE WHEN @OrdenarPor = 'UsuarioInteresado' AND @Sentido = '0' THEN UI.Apellido END
+									,CASE WHEN @OrdenarPor = 'UsuarioInteresado' AND @Sentido = '0' THEN UI.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioInteresado' AND @Sentido = '1' THEN UI.Apellido END DESC
+									,CASE WHEN @OrdenarPor = 'UsuarioInteresado' AND @Sentido = '1' THEN UI.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '0' THEN UD.Apellido END
+									,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '0' THEN UD.Nombre END
+								,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '1' THEN UD.Apellido END DESC
+									,CASE WHEN @OrdenarPor = 'UsuarioDestinatario' AND @Sentido = '1' THEN UD.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'FechaDeInicio' AND @Sentido = '0' THEN TA.FechaDeInicio END
+								,CASE WHEN @OrdenarPor = 'FechaDeInicio' AND @Sentido = '1' THEN TA.FechaDeInicio END DESC
+								,CASE WHEN @OrdenarPor = 'FechaLimite' AND @Sentido = '0' THEN TA.FechaLimite END
+								,CASE WHEN @OrdenarPor = 'FechaLimite' AND @Sentido = '1' THEN TA.FechaLimite END DESC
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '0' THEN TA.Numero END
+								,CASE WHEN @OrdenarPor = 'Numero' AND @Sentido = '1' THEN TA.Numero END DESC
+								,CASE WHEN @OrdenarPor = 'TipoDeTareas' AND @Sentido = '0' THEN TDT.Nombre END
+								,CASE WHEN @OrdenarPor = 'TipoDeTareas' AND @Sentido = '1' THEN TDT.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'EstadoDeTareas' AND @Sentido = '0' THEN EDT.Nombre END
+								,CASE WHEN @OrdenarPor = 'EstadoDeTareas' AND @Sentido = '1' THEN EDT.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Titulo' AND @Sentido = '0' THEN TA.Titulo END
+								,CASE WHEN @OrdenarPor = 'Titulo' AND @Sentido = '1' THEN TA.Titulo END DESC
+								,CASE WHEN @OrdenarPor = 'ImportanciaDeTareaId' AND @Sentido = '0' THEN IDT.Nombre END
+								,CASE WHEN @OrdenarPor = 'ImportanciaDeTareaId' AND @Sentido = '1' THEN IDT.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '0' THEN T.Nombre END
+								,CASE WHEN @OrdenarPor = 'Tabla' AND @Sentido = '1' THEN T.Nombre END DESC
+							) 
+						AS NumeroDeRegistro
+					FROM Tareas TA
+						INNER JOIN Usuarios UI ON TA.UsuarioOriginanteId = UI.id
+						INNER JOIN Usuarios UD ON TA.UsuarioDestinatarioId = UD.id
+						INNER JOIN TiposDeTareas TDT ON TA.TipoDeTareaId = TDT.id
+						INNER JOIN EstadosDeTareas EDT ON TA.EstadoDeTareaId = EDT.id
+						INNER JOIN ImportanciasDeTareas IDT ON TA.ImportanciaDeTareaId = IDT.id
+						INNER JOIN Tablas T ON TA.TablaId = T.id
+					WHERE 
+						(TA.Activo = @Activo OR @Activo IS NULL)
+						AND (TA.ContextoId = @ContextoId)
+						AND (TA.TipoDeTareaId = @TipoDeTareaId OR @TipoDeTareaId = '-1') -- FiltroDDL (FK)
+						--AND (TA.EstadoDeTareaId = @EstadoDeTareaId OR @EstadoDeTareaId = '-1') -- FiltroDDL (FK)
+						AND ((TA.EstadoDeTareaId IN(SELECT id FROM ufc_IdsString_ToTable_INT(@IdsString_EstadosDeTareas))) OR @IdsString_EstadosDeTareas = '-1') -- FiltroDDL (FK)
+						AND (TA.ImportanciaDeTareaId = @ImportanciaDeTareaId OR @ImportanciaDeTareaId = '-1') -- FiltroDDL (FK)
+						AND (TA.TablaId = @TablaId OR @TablaId = '-1') -- FiltroDDL (FK) pero en este caso se pasa su nombre, y luego adentro busca el id
+						AND (TA.FechaDeInicio > @FechaInicioDesde OR @FechaInicioDesde IS NULL)
+						AND (TA.FechaDeInicio < @FechaInicioHasta OR @FechaInicioHasta IS NULL)
+						AND (TA.FechaLimite > @FechaLimiteDesde OR @FechaLimiteDesde IS NULL)
+						AND (TA.FechaLimite < @FechaLimiteHasta OR @FechaLimiteHasta IS NULL)
+						AND
+						(
+							(@Filtro = '')
+							OR (TA.Numero LIKE '%' + @Filtro + '%')
+							OR (UI.Apellido + N', ' + UI.Nombre LIKE '%' + @Filtro + '%')
+							OR (UD.Apellido + N', ' + UD.Nombre LIKE '%' + @Filtro + '%')
+							OR (TA.Numero LIKE '%' + @Filtro + '%')
+							OR (TDT.Nombre LIKE '%' + @Filtro + '%')
+							OR (EDT.Nombre LIKE '%' + @Filtro + '%')
+							OR (TA.Titulo LIKE '%' + @Filtro + '%')
+							OR (IDT.Nombre LIKE '%' + @Filtro + '%')
+							OR (T.Nombre LIKE '%' + @Filtro + '%')
+						)
+				) Query
+		
+				SELECT	id 
+						,Numero
+						,UsuarioInteresado
+						,UsuarioDestinatario
+						,FechaDeInicio
+						,FechaLimite
+						,Numero
+						,TipoDeTaread
+						,EstadoDeTarea
+						,Titulo
+						,ImportanciaDeTarea
+						,Tabla
+				FROM  #TempTable
+				WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+					OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+				
+				SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+				DROP TABLE #TempTable
+			END
+    END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Tareas /Listados/ - FIN
+
+
+
+
+-- SP-TABLA: usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto /Listados/ - INICIO
+IF (OBJECT_ID('usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto') IS NOT NULL) DROP PROCEDURE usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto
+GO
+CREATE PROCEDURE usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto
+	-- Filtra usando la Rel PARA MOSTRAR SOLO LOS DEL CONTEXTO
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+  
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT TDC.id
+					,TDC.Nombre
+			FROM TiposDeContactos AS TDC
+				INNER JOIN RelAsig_TiposDeContactos_A_Contextos ATCAC ON ATCAC.TipoDeContactoId = TDC.id
+			WHERE
+				-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(TDC.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR 
+				(	
+					(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					-- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					AND (ATCAC.ContextoId = @ContextoId) -- FILTRAMOS PARA MOSTRAR SOLO LOS DEL CONTEXTO.
+				)
+				AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id: 
+				(
+					(@Filtro = '')
+					OR (TDC.Nombre LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY TDC.Nombre
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: usp_TiposDeContactos__ListadoDDLoCBXL_FiltrandoContexto /Listados/ - FIN
+
+ 
+ 
+ 
+-- SP-TABLA: Usuarios /Listados/ - INICIO
+IF (OBJECT_ID('usp_Usuarios__Listado') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Listado
+GO
+CREATE PROCEDURE usp_Usuarios__Listado
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@OrdenarPor                                    VARCHAR(50) = ''
+	,@Sentido                                       BIT = '0'
+	,@Filtro                                        VARCHAR(50) = ''
+ 
+	,@Activo                                        BIT = NULL
+	,@UltimoLoginFechaDesde                         DATETIME = NULL
+	,@UltimoLoginFechaHasta                         DATETIME = NULL
+	,@EsUsuarioAdminAnonimo                         BIT = NULL
+	,@FechaDeExpiracionCookieDesde                  DATETIME = NULL
+	,@FechaDeExpiracionCookieHasta                  DATETIME = NULL
+	--,@ActorId                                       INT = '-1' -- FiltroDDL (FK)
+ 
+	,@RegistrosPorPagina                            INT = '-1'
+	,@NumeroDePagina                                INT = '1'
+	,@TotalDeRegistros                              INT		OUTPUT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+		,@FuncionDePagina VARCHAR(30) = 'Listado'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el listado se Filtra contra el Contexto del Usuario, realizando la validación 1 implicitamente.
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para insertar (CargarLaPagina) registros en esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT * INTO #TempTable
+			FROM
+				(
+					SELECT U.id
+						,U.Apellido + ', ' + U.Nombre AS NombreCompleto
+						--,U.ActorId
+						,U.UserName
+						--,U.Pass
+						,U.Nombre
+						,U.Apellido
+						,U.Email
+						--,U.Email2
+						--,U.Telefono
+						--,U.Telefono2
+						--,U.Direccion
+						,U.Activo
+						--,U.UltimoLoginSesionId
+						--,U.UltimoLoginFecha
+						--,U.EsUsuarioAdminAnonimo
+						--,U.AuthCookie
+						--,U.FechaDeExpiracionCookie
+						--,CAST(ACT.Nombre AS VARCHAR(MAX)) AS Actor
+						,ROW_NUMBER() OVER
+						(
+							-- VER QUE PARA PONER VARIOS CAMPOS --> VARIAS LINEAS CON EL MISMO WHEN
+							ORDER BY
+								CASE WHEN @OrdenarPor = '' THEN U.Apellido END --DEFAULT
+								,CASE WHEN @OrdenarPor = '' THEN U.Nombre END --DEFAULT
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Apellido END
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '0' THEN U.Nombre END
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '1' THEN U.Apellido END DESC
+								,CASE WHEN @OrdenarPor = 'Usuario' AND @Sentido = '1' THEN U.Nombre END DESC
+								--,CASE WHEN @OrdenarPor = 'ActorId' AND @Sentido = '0' THEN U.ActorId END
+								--,CASE WHEN @OrdenarPor = 'ActorId' AND @Sentido = '1' THEN U.ActorId END DESC
+								,CASE WHEN @OrdenarPor = 'UserName' AND @Sentido = '0' THEN U.UserName END
+								,CASE WHEN @OrdenarPor = 'UserName' AND @Sentido = '1' THEN U.UserName END DESC
+								--,CASE WHEN @OrdenarPor = 'Pass' AND @Sentido = '0' THEN U.Pass END
+								--,CASE WHEN @OrdenarPor = 'Pass' AND @Sentido = '1' THEN U.Pass END DESC
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '0' THEN U.Nombre END
+								,CASE WHEN @OrdenarPor = 'Nombre' AND @Sentido = '1' THEN U.Nombre END DESC
+								,CASE WHEN @OrdenarPor = 'Apellido' AND @Sentido = '0' THEN U.Apellido END
+								,CASE WHEN @OrdenarPor = 'Apellido' AND @Sentido = '1' THEN U.Apellido END DESC
+								,CASE WHEN @OrdenarPor = 'Email' AND @Sentido = '0' THEN U.Email END
+								,CASE WHEN @OrdenarPor = 'Email' AND @Sentido = '1' THEN U.Email END DESC
+								--,CASE WHEN @OrdenarPor = 'Email2' AND @Sentido = '0' THEN U.Email2 END
+								--,CASE WHEN @OrdenarPor = 'Email2' AND @Sentido = '1' THEN U.Email2 END DESC
+								--,CASE WHEN @OrdenarPor = 'Telefono' AND @Sentido = '0' THEN U.Telefono END
+								--,CASE WHEN @OrdenarPor = 'Telefono' AND @Sentido = '1' THEN U.Telefono END DESC
+								--,CASE WHEN @OrdenarPor = 'Telefono2' AND @Sentido = '0' THEN U.Telefono2 END
+								--,CASE WHEN @OrdenarPor = 'Telefono2' AND @Sentido = '1' THEN U.Telefono2 END DESC
+								--,CASE WHEN @OrdenarPor = 'Direccion' AND @Sentido = '0' THEN U.Direccion END
+								--,CASE WHEN @OrdenarPor = 'Direccion' AND @Sentido = '1' THEN U.Direccion END DESC
+								--,CASE WHEN @OrdenarPor = 'UltimoLoginSesionId' AND @Sentido = '0' THEN U.UltimoLoginSesionId END
+								--,CASE WHEN @OrdenarPor = 'UltimoLoginSesionId' AND @Sentido = '1' THEN U.UltimoLoginSesionId END DESC
+								--,CASE WHEN @OrdenarPor = 'UltimoLoginFecha' AND @Sentido = '0' THEN U.UltimoLoginFecha END
+								--,CASE WHEN @OrdenarPor = 'UltimoLoginFecha' AND @Sentido = '1' THEN U.UltimoLoginFecha END DESC
+								--,CASE WHEN @OrdenarPor = 'EsUsuarioAdminAnonimo' AND @Sentido = '0' THEN U.EsUsuarioAdminAnonimo END
+								--,CASE WHEN @OrdenarPor = 'EsUsuarioAdminAnonimo' AND @Sentido = '1' THEN U.EsUsuarioAdminAnonimo END DESC
+								--,CASE WHEN @OrdenarPor = 'AuthCookie' AND @Sentido = '0' THEN U.AuthCookie END
+								--,CASE WHEN @OrdenarPor = 'AuthCookie' AND @Sentido = '1' THEN U.AuthCookie END DESC
+								--,CASE WHEN @OrdenarPor = 'FechaDeExpiracionCookie' AND @Sentido = '0' THEN U.FechaDeExpiracionCookie END
+								--,CASE WHEN @OrdenarPor = 'FechaDeExpiracionCookie' AND @Sentido = '1' THEN U.FechaDeExpiracionCookie END DESC
+								--,CASE WHEN @OrdenarPor = 'Actor' AND @Sentido = '0' THEN ACT.Nombre END
+								--,CASE WHEN @OrdenarPor = 'Actor' AND @Sentido = '1' THEN ACT.Nombre END DESC
+						) AS NumeroDeRegistro
+					FROM Usuarios AS U
+						--INNER JOIN Actores ACT ON ACT.id = U.ActorId
+						INNER JOIN Contextos CX ON CX.id = U.ContextoId
+					WHERE
+						(U.id > '0') -- No es necesario, pero para mantener estructura de los "AND" Siguientes.
+						AND (U.ContextoId = @ContextoId OR @ContextoId = '-1')
+						AND (U.Activo = @Activo OR @Activo IS NULL)
+						AND (U.UltimoLoginFecha >= @UltimoLoginFechaDesde OR @UltimoLoginFechaDesde IS NULL)
+						AND (U.UltimoLoginFecha <= @UltimoLoginFechaHasta OR @UltimoLoginFechaHasta IS NULL)
+						AND (U.EsUsuarioAdminAnonimo = @EsUsuarioAdminAnonimo OR @EsUsuarioAdminAnonimo IS NULL)
+						AND (U.FechaDeExpiracionCookie >= @FechaDeExpiracionCookieDesde OR @FechaDeExpiracionCookieDesde IS NULL)
+						AND (U.FechaDeExpiracionCookie <= @FechaDeExpiracionCookieHasta OR @FechaDeExpiracionCookieHasta IS NULL)
+						--AND (U.ActorId = @ActorId OR @ActorId = '-1') -- FiltroDDL (FK)
+						AND
+						(
+							(@Filtro = '')
+							--OR (U.ActorId LIKE '%' + @Filtro + '%')
+							OR (U.UserName LIKE '%' + @Filtro + '%')
+							--OR (U.Pass LIKE '%' + @Filtro + '%')
+							OR (U.Nombre LIKE '%' + @Filtro + '%')
+							OR (U.Apellido LIKE '%' + @Filtro + '%')
+							OR (U.Email LIKE '%' + @Filtro + '%')
+							--OR (U.Email2 LIKE '%' + @Filtro + '%')
+							--OR (U.Telefono LIKE '%' + @Filtro + '%')
+							--OR (U.Telefono2 LIKE '%' + @Filtro + '%')
+							--OR (U.Direccion LIKE '%' + @Filtro + '%')
+							--OR (U.UltimoLoginSesionId LIKE '%' + @Filtro + '%')
+							--OR (U.UltimoLoginFecha LIKE '%' + @Filtro + '%')
+							--OR (U.EsUsuarioAdminAnonimo LIKE '%' + @Filtro + '%')
+							--OR (U.AuthCookie LIKE '%' + @Filtro + '%')
+							--OR (U.FechaDeExpiracionCookie LIKE '%' + @Filtro + '%')
+							--OR (ACT.Nombre LIKE '%' + @Filtro + '%')
+						)
+			) Query
+ 
+		SELECT *
+		FROM  #TempTable
+			WHERE (@RegistrosPorPagina = '-1') -- Sin Paginación
+				OR (NumeroDeRegistro BETWEEN ((@NumeroDePagina - 1) * @RegistrosPorPagina) + 1 AND @RegistrosPorPagina * (@NumeroDePagina)) -- Con Paginación
+ 
+			SET @TotalDeRegistros = (SELECT	COUNT(*) FROM  #TempTable)
+			DROP TABLE #TempTable
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+
+
+
+IF (OBJECT_ID('usp_Usuarios__Listado_DeNotas') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Listado_DeNotas
+GO
+CREATE PROCEDURE usp_Usuarios__Listado_DeNotas 
+		@UsuarioQueEjecutaId		INT						
+		,@FechaDeEjecucion			DATETIME				
+		
+		--,@OrdenarPor				VARCHAR(50) = ''
+		--,@Sentido					BIT = 0
+		--,@Filtro					VARCHAR(50) = ''
+		
+		,@sResSQL					VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Listado'
+			,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+				
+				DECLARE @Orden	INT 
+				SELECT  @Orden = Orden FROM EstadosDeContextos EDC
+					INNER JOIN Contextos CONT ON EDC.id = CONT.EstadoDeContextoId 
+				WHERE  (CONT.id = @ContextoId)
+				
+				DECLARE @MostrarNotas	BIT
+				SELECT @MostrarNotas = 
+					CASE
+						WHEN @Orden IS NULL THEN 0
+						WHEN @Orden < 100 THEN 1
+						ELSE 0
+					END
+					
+				IF @MostrarNotas = 1
+					BEGIN
+						SELECT EDC.id
+								,EDC.Nombre AS NombreDe_EstadoDeContexto
+								,PAG.Nombre AS Pagina
+						FROM EstadosDeContextos EDC
+							INNER JOIN Contextos CONT ON EDC.id = CONT.EstadoDeContextoId 
+							INNER JOIN Paginas PAG ON EDC.PaginaId = PAG.id 
+						WHERE  (CONT.id = @ContextoId)
+					END
+				ELSE
+					BEGIN
+						SET @sResSQL = 'No hay notas para mostrar.' 
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+ 
+ 
+ 
+IF (OBJECT_ID('usp_Usuarios__ListadoDDLoCBXL') IS NOT NULL) DROP PROCEDURE usp_Usuarios__ListadoDDLoCBXL
+GO
+CREATE PROCEDURE usp_Usuarios__ListadoDDLoCBXL
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+ 
+	,@id                                            INT = '0'	 -- Default, Si pasa un id, lo agregamos al SELECT.
+	,@Filtro                                        VARCHAR(50) = ''
+	,@Activo                                        BIT = NULL
+ 
+	,@RolDeUsuarioId								INT = '-1' -- FiltroDDL (FK)
+	
+	--,@ActorId                                       INT = '-1' -- FiltroDDL (FK)
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+		,@FuncionDePagina VARCHAR(30) = 'ListadoDDL'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- EN LOS DDL NO se valida las autorizaciones contra los registros o tablas, ya que los pedidos son "cruzados" en estos casos, donde un usuario puede tener permiso en la tabla principal, pero no en las satelite (la del ListadoDDL) y sin embargo necesita listar para llenar la DDL.
+	SET @sResSQL = '' -- Lo necesito para que no de error lo siguiente, si es NULL (Ya que quiero mantener el Formato).
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+ 
+			SELECT U.id
+				,U.Apellido  + N', ' + U.Nombre   + N' - (' +  U.UserName + '@' + CX.Codigo + N')' AS Nombre
+			FROM Usuarios AS U
+				INNER JOIN Contextos CX ON CX.id = U.ContextoId
+			WHERE 
+				-- Respetar el formato del WHERE. Los "filtros" que se pasan con parámetros del modelo se agregan dentro del "OR" en una linea.
+				(U.id = @id) -- Si pasó un registro particular, lo agregamos al Select (Por ejemplo en un registro que está está seleccionado en el DDL, pero que actualmente está "Anulado".
+				OR 
+				(	
+					(1 = 1) -- Es un truco para mantener el formato del WHERE y que no dé error si no hay ninguna FK y además la tabla no tiene ContextoId ni Activo.
+					 -- Los "filtros" que se pasan con parámetros del modelo se agregan a continuación:
+					 --AND (U.ActorId = @ActorId OR @ActorId = '-1') -- FiltroDDL (FK)
+					 AND (U.Activo = @Activo OR @Activo IS NULL)
+					 AND (U.ContextoId = @ContextoId OR @ContextoId = '-1')
+				 	 AND (U.id IN (SELECT UsuarioId FROM RelAsig_RolesDeUsuarios_A_Usuarios WHERE (RolDeUsuarioId = @RolDeUsuarioId OR @RolDeUsuarioId = '-1'))) -- FiltroDDL (FK)
+				)
+				AND -- Solo esta parte que involucra a @Filtro (y que corresponde a un filtrado a nivel string) va fuera del OR, ya que también afecta al registro @id: 
+				(
+					(@Filtro = '')
+					OR (U.Apellido LIKE '%' + @Filtro + '%')
+					OR (U.Nombre LIKE '%' + @Filtro + '%')
+					OR (U.UserName LIKE '%' + @Filtro + '%')
+					OR (CX.Codigo LIKE '%' + @Filtro + '%')
+				)
+			ORDER BY U.Nombre
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Usuarios /Listados/ - FIN
+
+
+
+-- ---------------------------------
+-- Script: 12b_Core__Listados Particulares.sql - FIN
+-- =====================================================

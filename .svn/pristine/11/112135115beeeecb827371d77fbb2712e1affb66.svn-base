@@ -1,0 +1,309 @@
+﻿<!-- ========== Left Sidebar Start ========== -->
+<div class="left side-menu removeOnIframe">
+    <button type="button" class="button-menu-mobile button-menu-mobile-topbar open-left waves-effect">
+        <i class="ion-close"></i>
+    </button>
+
+    <!-- LOGO -->
+    <div class="topbar-left">
+        <div class="text-center">
+            <!--<a href="index.html" class="logo">Admiry</a>-->
+            <a href="/@ViewBag.Seccion/Home/Index" class="logo"><img src="/template/img/logo.png" height="55" alt="logo"></a>
+        </div>
+    </div>
+
+    <div class="sidebar-inner slimscrollleft">
+
+        <div class="user-details">
+            <div class="text-center">
+                <img src="~/template/images/users/avatar-1.jpg" alt="" class="rounded-circle">
+            </div>
+            <div class="user-info">
+                <h4 class="font-16">@TempData["Nombre"]</h4>
+                <span class="text-muted user-status"><i class="fa fa-dot-circle-o text-success"></i> Online</span>
+            </div>
+        </div>
+
+        <div id="sidebar-menu">
+
+
+
+            <ul>
+                <li>
+                    <a href="/@ViewBag.Seccion/Home/Index" class="waves-effect">
+                        <i class="mdi mdi-view-dashboard"></i>
+                        <span> Inicio </span>
+                    </a>
+                </li>
+
+                @if (ViewBag.Seccion != "administracion")
+                {
+
+                    <h4 class="menu-titulo">Intranet</h4>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-worker"></i> <span> Contactos </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/Contactos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/Contactos/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-worker"></i> <span> Grupos de contactos </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/GruposDeContactos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/GruposDeContactos/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-google-maps"></i> <span> Informes </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/Informes/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/Informes/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-google-maps"></i> <span> Notas </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/Notas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/Notas/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-calendar-clock"></i> <span> Reservas  </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/ReservasDeRecursos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/ReservasDeRecursos/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                            <li><a href="/intranet/ReservasDeRecursos/Disponibilidad"><i class="mdi mdi-av-timer"></i>Verificar disponibilidad</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-life-ring"></i> <span> Soportes </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/Soportes/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/Soportes/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-clipboard"></i> <span> Tareas </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/intranet/Tareas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/intranet/Tareas/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <h4 class="menu-titulo">Personal</h4>
+
+
+                    <li class="">
+                        <a href="/PrivadaDelUsuario/Usuarios/CambiarPassword" class="waves-effect"><i class="mdi mdi-account-key"></i> <span> Cambio de contraseña </span> </a>
+
+                    </li><li class="">
+                             <a href="/PrivadaDelUsuario/Notificaciones/Listado" class="waves-effect"><i class="mdi mdi-account-key"></i> <span> Todas mis notificaciones </span> </a>
+
+                    </li>
+                    
+                    <h4 class="menu-titulo">Administración</h4>
+                    <li class="">
+                        <a href="/Administracion/Home/Index" class="waves-effect"><i class="fa fa-check-square-o"></i> <span>Ir a la administración</span> </a>
+
+                    </li>
+                    <h4 class="menu-titulo">Otros sitios</h4>
+
+
+                    <li class="">
+                        <a href="http://www.iatasa.com/Quienes_Somos.aspx" class="waves-effect"><i class="mdi mdi-pencil-box-outline"></i> <span> Web </span> </a>
+
+                    </li>
+                    <li class="">
+                        <a href="https://mail.ionos.com/" class="waves-effect"><i class="mdi mdi-domain"></i> <span> Webmail </span> </a>
+
+                    </li>
+
+                }
+                else
+                {
+
+
+
+                    <h4 class="menu-titulo">Administración</h4>
+
+
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-check-square-o"></i> <span> Asig. roles a usuarios </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/RelAsig_RolesDeUsuarios_A_Usuarios/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+
+                        </ul>
+                    </li>
+
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-facebook-box"></i> <span> Cat. de informes </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/CategoriasDeInformes/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/administracion/CategoriasDeInformes/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-file-text-o"></i> <span> Log envíos </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/LogEnviosDeCorreos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-application"></i> <span> Recursos </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/Recursos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/administracion/Recursos/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-worker"></i> <span> Tipos de contactos </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/RelAsig_TiposDeContactos_A_Contextos/Listado"><i class="mdi mdi-table-large"></i>Listado - Asignación</a></li>
+
+                        </ul>
+                    </li>
+
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-clipboard "></i> <span> Tipos de tareas </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/TiposDeTareas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/administracion/TiposDeTareas/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has_sub">
+                        <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-account-circle"></i> <span> Usuarios </span> </a>
+                        <ul class="list-unstyled">
+                            <li><a href="/administracion/Usuarios/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                            <li><a href="/administracion/Usuarios/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                        </ul>
+                    </li>
+
+                    try
+                    {
+                        if ((bool)TempData["EsMasterAdmin"])
+                        {
+
+
+                            <h4 class="menu-titulo">Master Admin</h4>
+
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-check-square-o"></i> <span> Asig. c. envios a tablas </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/RelAsig_CuentasDeEnvios_A_Tablas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                    <li><a href="/administracion/RelAsig_CuentasDeEnvios_A_Tablas/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                                </ul>
+                            </li>
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-check-square-o"></i> <span> Asig. roles a páginas </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/RelAsig_RolesDeUsuarios_A_Paginas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+
+                                </ul>
+                            </li>
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-domain"></i> <span> Cuentas de envíos </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/CuentasDeEnvios/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                    <li><a href="/administracion/CuentasDeEnvios/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                                </ul>
+                            </li>
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-cellphone-android"></i> <span> Dispositivos </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/Dispositivos/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                    <li><a href="/administracion/Dispositivos/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                                </ul>
+                            </li>
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-asterisk"></i> <span> IconosCSS </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/IconosCSS/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                    <li><a href="/administracion/IconosCSS/Insert"><i class="mdi mdi-plus-box"></i>Agregar</a></li>
+                                </ul>
+                            </li>
+
+
+
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="fa fa-file-text-o"></i> <span> Log errores </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/LogErrores/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                </ul>
+                            </li>
+
+                            <li class="has_sub">
+                                <a href="javascript:void(0);" class="waves-effect"><i class="mdi mdi-application"></i> <span> Páginas </span> </a>
+                                <ul class="list-unstyled">
+                                    <li><a href="/administracion/Paginas/Listado"><i class="mdi mdi-table-large"></i>Listado</a></li>
+                                </ul>
+                            </li>
+
+
+
+
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+
+                    }
+
+                    <h4 class="menu-titulo">Personal</h4>
+
+
+                    <li class="">
+                        <a href="/PrivadaDelUsuario/Usuarios/CambiarPassword" class="waves-effect"><i class="mdi mdi-account-key"></i> <span> Cambio de contraseña </span> </a>
+
+                    </li>
+                    <li class="">
+                        <a href="/PrivadaDelUsuario/Notificaciones/Listado" class="waves-effect"><i class="mdi mdi-account-key"></i> <span> Todas mis notificaciones </span> </a>
+
+                    </li>
+
+                    <h4 class="menu-titulo">Intranet</h4>
+
+                    <li class="">
+                        <a href="/Intranet/Home/Index" class="waves-effect"><i class="fa fa-check-square-o"></i> <span>Ir a la intranet </span> </a>
+
+                    </li>
+                    <h4 class="menu-titulo">Otros sitios</h4>
+
+                    <li class="">
+                        <a href="http://www.iatasa.com/Quienes_Somos.aspx" class="waves-effect"><i class="mdi mdi-pencil-box-outline"></i> <span> Web </span> </a>
+
+                    </li>
+                    <li class="">
+                        <a href="https://mail.ionos.com/" class="waves-effect"><i class="mdi mdi-domain"></i> <span> Webmail </span> </a>
+
+                    </li>
+                }
+
+
+
+            </ul>
+
+        </div>
+        <div class="clearfix"></div>
+    </div> <!-- end sidebarinner -->
+</div>
+<!-- Left Sidebar End -->
+
+<link href="~/template/plugins/alertify/css/alertify.css" rel="stylesheet" />
+<script src="~/template/plugins/alertify/js/alertify.js"></script>
+<script src="~/Scripts/alertify.js"></script>
+<link href="~/Content/alertifyjs/alertify.css" rel="stylesheet" />
+<link href="~/Content/alertifyjs/alertify.rtl.css" rel="stylesheet" />

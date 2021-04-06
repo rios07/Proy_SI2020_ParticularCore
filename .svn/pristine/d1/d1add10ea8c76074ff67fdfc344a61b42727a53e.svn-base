@@ -1,0 +1,21 @@
+﻿<script src="~/template/plugins/forms/summernote/summernote.js"></script>
+<script src="~/template/js/HtmlEditor.js"></script>
+
+
+<script>
+    
+    $(function () {
+        $('input[data-val-required], select[data-val-required]').each(function () {
+            var id = this.id;
+            //if (id.includes('Id') && id!='Id') {
+            //    id = id.substring(0, id.indexOf('Id'));
+            //}
+            if (id.toUpperCase() != "ID") {
+                $('label[for$=' + id + ']').html($('label[for$=' + id + ']').html() + ' (*)');
+            }
+        });
+    });
+
+    
+
+</script>

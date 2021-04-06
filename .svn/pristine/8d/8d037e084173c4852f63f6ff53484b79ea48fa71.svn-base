@@ -1,0 +1,137 @@
+﻿<!-- CSS: Inicio -->
+<!-- Icons -->
+@*<link href="template/css/icons.css" rel="stylesheet" />
+<!-- Bootstrap stylesheets (included template modifications) -->
+<link href="template/css/bootstrap.css" rel="stylesheet" />
+<!-- Plugins stylesheets (all plugin custom css) -->
+<link href="template/css/plugins.css" rel="stylesheet" />
+<!-- Main stylesheets (template main css file) -->
+<link href="template/css/main.css" rel="stylesheet" />
+<!-- Custom stylesheets ( Put your own changes here ) -->
+<link href="template/css/custom.css" rel="stylesheet" />
+<!-- CSS: Fin -->
+<!-- SCRIPTS: INICIO -->
+<script src="template/plugins/forms/bootstrap-filestyle/bootstrap-filestyle.js"></script>
+<script src="template/plugins/forms/autosize/jquery.autosize.js"></script>
+<script src="template/plugins/forms/maxlength/bootstrap-maxlength.js"></script>
+<script src="template/plugins/forms/checkall/jquery.checkAll.js"></script>
+<script src="template/plugins/forms/fancyselect/fancySelect.js"></script>
+<script src="template/plugins/forms/validation/jquery.validate.js"></script>
+<script src="template/plugins/forms/validation/additional-methods.min.js"></script>*@
+<!-- SCRIPTS: FIN -->
+<!-- .navbar-brand -->
+<a href="~/Home/Index" class="navbar-brand hidden-xs hidden-sm">
+    <img src="~/template/img/logo.png" width="180" height="45" class="logo hidden-xs" alt="Placeholderu">
+    <img src="~/template/img/logosm.png" class="logo-sm hidden-lg hidden-md" alt="Dynamic logo">
+</a>
+<!-- / navbar-brand -->
+<!-- .no-collapse -->
+<div id="navbar-no-collapse" class="navbar-no-collapse">
+    <!-- top left nav -->
+    <ul class="nav navbar-nav">
+        <li class="toggle-sidebar">
+            <a href="#">
+                <i class="fa fa-reorder"></i>
+                <span class="sr-only">sColapsarMenu</span>
+            </a>
+        </li>
+        @*<li><a href="#" class="reset-layout tipB" title="Reset panel position for this page"><i class="fa fa-history"></i></a></li>*@
+        
+    </ul>
+    <!-- / top left nav -->
+    <!-- top right nav -->
+    <ul class="nav navbar-nav navbar-right">
+        <li class="hidden-sm hidden-xs" style="bottom: -15px">
+            @*Contexto: @ViewBag.Contexto*@
+        </li>
+        <li class="dropdown hidden">
+            <a href="#" data-toggle="dropdown" title="Notificaciones">
+                <i class="fa fa-bell-o"></i>
+                <span class="sr-only"><%= Mv3.Info.iTextos.sNotificaciones%></span>
+                <span class="badge badge-danger">3</span>
+            </a>
+            <ul class="dropdown-menu right dropdown-notification" role="menu">
+                <li>
+                    <a href="#" class="dropdown-menu-header"><%= Mv3.Info.iTextos.sNotificaciones%></a>
+                </li>
+                <li>
+                    <a href="Soporte_Listado.aspx"><i class="l-basic-life-buoy"></i>2 soportes requeridos</a>
+                </li>
+                <li>
+                    <a href="Inspecciones_Listado.aspx"><i class="fa fa-road"></i>17 nuevas inspecciones</a>
+                </li>
+                <li>
+                    <a href="Usuarios_Listado.aspx"><i class="fa fa-user"></i>1 usuario nuevo</a>
+                </li>
+                
+                <li>
+                    <a href="#"><i class="l-basic-gear"></i>Settings is changed</a>
+                </li>
+                <li>
+                    <a href="#"><i class="l-weather-lightning"></i>5 min server downtime</a>
+                </li>
+                <li>
+                    <a href="#"><i class="l-basic-server2"></i>Ultima publicación</a>
+                </li>
+                <li>
+                    <a href="#"><i class="l-basic-lightbulb"></i>SuggeElson push 1 commit</a>
+                </li>
+                <li>
+                    <a href="#" class="view-all">Ver todos<i class="l-arrows-right"></i></a>
+                </li>
+            </ul>
+        </li>
+        @*<li class="dropdown">
+            <a href="#" data-toggle="dropdown" title="Configuraciones visuales">
+                <i class="fa fa-cog"></i>
+                <span class="sr-only">Configuraciones visuales</span>
+            </a>
+            <ul class="dropdown-menu dropdown-form dynamic-settings right" role="menu">
+                <li>
+                    <a href="#" class="dropdown-menu-header">Configuración del sitio</a>
+                </li>
+                <li>
+                    <div class="toggle-custom">
+                        <label class="toggle" data-on="ON" data-off="OFF">
+                            <input type="checkbox" id="fixed-header-toggle" name="fixed-header-toggle" checked>
+                            <span class="button-checkbox"></span>
+                        </label>
+                        <label for="fixed-header-toggle">Cabecera fija</label>
+                    </div>
+                </li>
+                <li>
+                    <div class="toggle-custom">
+                        <label class="toggle" data-on="ON" data-off="OFF">
+                            <input type="checkbox" id="fixed-left-sidebar" name="fixed-left-sidebar" checked>
+                            <span class="button-checkbox"></span>
+                        </label>
+                        <label for="fixed-left-sidebar">Menú izquierdo fijo</label>
+                    </div>
+                </li>
+                <li>
+                    <div class="toggle-custom">
+                        <label class="toggle" data-on="ON" data-off="OFF">
+                            <input type="checkbox" id="fixed-right-sidebar" name="fixed-right-sidebar" checked>
+                            <span class="button-checkbox"></span>
+                        </label>
+                        <label for="fixed-right-sidebar">Menú derecho fijo</label>
+                    </div>
+                </li>
+            </ul>
+        </li>*@
+        <li>
+            <a href="~/Intranet/Home/Logout" title="Logout">
+                <i class="fa fa-power-off"></i>
+                <span class="sr-only">Logout</span>
+            </a>
+        </li>
+        <li>
+            <a id="toggle-right-sidebar" href="#" class="tipB hidden" title="Mostrar el menú derecho">
+                <i class="l-software-layout-sidebar-right"></i>
+                <span class="sr-only">Cerrar menú derecho</span>
+            </a>
+        </li>
+    </ul>
+    <!-- / top right nav -->
+</div>
+<!-- / collapse -->

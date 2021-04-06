@@ -1,0 +1,266 @@
+﻿@model ControladoresCore.ViewModels.LoginVM
+
+@{
+    ViewBag.Title = "Panel inicial";
+}
+@if (!Request.IsAuthenticated)
+{
+
+    Layout = "";
+
+    <link href="~/template/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="~/template/css/icons.css" rel="stylesheet" type="text/css">
+    <link href="~/template/css/style.css" rel="stylesheet" type="text/css">
+}
+
+<style>
+    input#Usuario {
+        width: 51%;
+        text-align: right;
+        box-shadow: none;
+        border-right: none;
+        padding: 0;
+        border-top-right-radius: 0px;
+        border-bottom-right-radius: 0px;
+    }
+
+    input#Contexto {
+        box-shadow: none;
+        width: 43%;
+        border-left: none;
+        padding: 0;
+    }
+
+    input#DisArr {
+        width: 6%;
+        margin: 0;
+        padding: 0;
+        cursor: text;
+        text-align: center;
+        border-left: none;
+        border-right: none;
+        border-top-right-radius: 0px;
+        border-bottom-right-radius: 0px;
+        border-bottom-left-radius: 0px;
+        border-top-left-radius: 0px;
+        background-color: white
+    }
+</style>
+
+
+
+
+@{ string user = "";}
+@{ string contexto = "";}
+<!-- ver los dos usos del razor inline  -->
+<!-- los names coinciden con los campos que espera el objeto PostData del Controller -->
+
+
+@if (Request.IsAuthenticated)
+{<div class="form-horizontal">
+        <div class="panel panel-primary ex1">
+            <div class="panel-heading">
+                <h4 class="panel-title"></h4>
+
+            </div>
+            <h2 class="text-focus-in">Bienvenido @TempData["Nombre"]</h2>
+            <br />
+           
+            
+        </div>
+    </div>
+}
+else
+{
+    if (ViewBag.User != null)
+    {
+        user = ViewBag.User;
+        contexto = ViewBag.Contexto;
+    }
+    else
+    {
+        user = "";
+        contexto = "";
+    }
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>Intranet</title>
+        <!-- Mobile specific metas -->
+        @*<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1 user-scalable=no">
+            <!-- Force IE9 to render in normal mode -->
+            <!--[if IE]><meta http-equiv="x-ua-compatible" content="IE=9" /><![endif]-->
+            <meta name="author" content="" />
+            <meta name="description" content="" />
+            <meta name="keywords" content="" />
+            <meta name="application-name" content="" />
+            <!-- Import google fonts - Heading first/ text second -->
+            <link href='http://fonts.googleapis.com/css?family=Quattrocento+Sans:400,700' rel='stylesheet' type='text/css'>
+            <!-- Css files -->
+            <!-- Icons -->
+            <link href="css/icons.css" rel="stylesheet" />
+            <!-- Bootstrap stylesheets (included template modifications) -->
+            <link href="css/bootstrap.css" rel="stylesheet" />
+            <!-- Plugins stylesheets (all plugin custom css) -->
+            <link href="css/plugins.css" rel="stylesheet" />
+            <!-- Main stylesheets (template main css file) -->
+            <link href="css/main.css" rel="stylesheet" />
+            <!-- Custom stylesheets ( Put your own changes here ) -->
+            <link href="css/custom.css" rel="stylesheet" />
+            <!-- Fav and touch icons -->*@
+
+
+    </head>
+    <body>
+
+        <!-- Begin page -->
+        <div class="accountbg"></div>
+        <div class="wrapper-page">
+
+            <div class="card">
+                <div class="card-block">
+
+                    <h3 class="text-center mt-0 m-b-15">
+                        <a href="#" class="logo logo-admin"><img src="/template/img/logo-color.jpg" height="80" alt="logo"></a>
+                    </h3>
+
+
+                    <h4 class="text-muted text-center font-18"><b>Ingresar</b></h4>
+
+                    <div class="p-3">
+                        <form class="form-horizontal m-t-20" action="/" method="post">
+                            @Html.AntiForgeryToken()
+                            @InputExtensions.Hidden(Html, "returnUrl", @ViewBag.returnUrl)
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <div class="input-group input-icon DivError">
+                                        <span class="input-group-addon"><i class="fa fa-envelope"></i></span>
+                                        <input type="text" name="Usuario" id="Usuario" class="form-control" value="@user" placeholder="Usuario">
+                                        <input type="text" class="form-control" disabled="disabled" id="DisArr" value="@("@")">
+                                        <input type="text" name="Contexto" id="Contexto" class="form-control" value="@contexto" placeholder="Contexto">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <div class="input-group input-icon DivError">
+                                        <span class="input-group-addon"><i class="fa fa-key"></i></span>
+                                        <input type="password" style="box-shadow:none; text-align:center;max-width:none" name="Contraseña" id="Contrase_a" class="form-control" value="" placeholder="Contraseña">
+                                    </div>
+                                    @Html.ValidationMessageFor(model => model.Contraseña, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+
+                            <div id="DivError" class="isa_error p0 m0" style="border-radius:3px" @(ViewBag.LoginMensaje == null ? "hidden='\"hidden\"" : "")>
+                                <i class="fa fa-times-circle"></i>
+                                @ViewBag.LoginMensaje
+                            </div>
+
+
+
+                            <div class="form-group text-center row m-t-20">
+                                <div class="col-12">
+                                    
+                                    <button class="btn btn-default pull-right" onclick="return ContraseniaValida()" type="submit">Iniciar Sesión</button>
+                                </div>
+                            </div>
+                           
+
+
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- jQuery  -->
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/tether.min.js"></script><!-- Tether for Bootstrap -->
+        <script src="assets/js/bootstrap.min.js"></script>
+        <script src="assets/js/modernizr.min.js"></script>
+        <script src="assets/js/detect.js"></script>
+        <script src="assets/js/fastclick.js"></script>
+        <script src="assets/js/jquery.slimscroll.js"></script>
+        <script src="assets/js/jquery.blockUI.js"></script>
+        <script src="assets/js/waves.js"></script>
+        <script src="assets/js/jquery.nicescroll.js"></script>
+        <script src="assets/js/jquery.scrollTo.min.js"></script>
+
+        <!-- App js -->
+        <script src="assets/js/app.js"></script>
+
+    </body>
+
+
+</html>
+
+
+
+}
+
+
+<script>
+    function ContraseniaValida() {
+        if ($('#Contrase_a').val() == "") {
+
+            return false;
+        }
+        else {
+            return true;
+        }
+
+    }
+
+    //$(function () {
+    //    if ($('#DivError').attr('hidden') != "hidden") {
+    //        $('.DivError').each(function () {
+    //            $(this).children().effect('highlight', { color: '#ee9999' }, 200)
+    //        })
+    //    }
+    //})
+</script>
+
+
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}
+
+<style>
+    .isa_info, .isa_success, .isa_warning, .isa_error {
+        margin: 10px 0px;
+        padding: 12px;
+    }
+
+    .isa_info {
+        color: #00529B;
+        background-color: #BDE5F8;
+    }
+
+    .isa_success {
+        color: #4F8A10;
+        background-color: #DFF2BF;
+    }
+
+    .isa_warning {
+        color: #9F6000;
+        background-color: #FEEFB3;
+    }
+
+    .isa_error {
+        color: #D8000C;
+        background-color: #FFD2D2;
+    }
+
+        .isa_info i, .isa_success i, .isa_warning i, .isa_error i {
+            margin: 10px 22px;
+            font-size: 2em;
+            vertical-align: middle;
+        }
+</style>
+

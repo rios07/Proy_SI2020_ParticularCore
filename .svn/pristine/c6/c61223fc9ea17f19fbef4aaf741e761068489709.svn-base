@@ -1,0 +1,10 @@
+﻿
+@{
+    ViewBag.Title = "View";
+}
+
+<h2>View</h2>
+<h3>Se ha eliminado con exito</h3>
+
+@Html.ActionLink("Volver a Informes", "Listado")
+

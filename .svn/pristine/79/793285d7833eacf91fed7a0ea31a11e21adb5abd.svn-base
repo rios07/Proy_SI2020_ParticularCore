@@ -1,0 +1,208 @@
+﻿@model ControladoresCore.ViewModels.RelAsig_RolesDeUsuarios_A_PaginasVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Usuarios - Listado";
+}
+<style>
+    tr img {
+        width: 40px;
+        height: 40px;
+    }
+</style>
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border">
+        <div class="form-group row">
+            <label class="col-lg-1 control-label">
+                Tabla
+            </label>
+            <div class="col-lg-3">
+                @Html.DropDownListFor(m => m.TablaId, new SelectList(Model.Tablas, "Id", "Nombre", Model.TablaId
+                    ), "- Todas -", new { filtro = "TablaId", @class = "form-control"})
+            </div>
+            <label class="col-md-3 control-label">
+                Autorizado a Cargar Página
+            </label>
+            <div class="col-md-1">
+                @HtmlHelperExtension.FiltroCheckbox("Autorizado a Cargar Página", "AutorizadoA_CargarLaPagina")
+            </div>
+            <label class="col-md-3 control-label">
+                Autorizado a Operar Página
+            </label>
+            <div class="col-md-1">
+                @HtmlHelperExtension.FiltroCheckbox("Autorizado a Operar Página", "AutorizadoA_OperarLaPagina")
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-md-1 control-label">
+                Rol de Usuario
+            </label>
+            <div class="col-md-3">
+                @Html.DropDownListFor(m => m.RolDeUsuarioId, new SelectList(Model.Roles, "Id", "Nombre", Model.RolDeUsuarioId
+                    ), "- Todas -", new { filtro = "RolDeUsuarioId", @class = "form-control" })
+            </div>
+            <label class="col-md-3 control-label">
+                Autorizado a Ver Anulados
+            </label>
+            <div class="col-md-1">
+                @HtmlHelperExtension.FiltroCheckbox("Autorizado a Ver Anulados", "AutorizadoA_VerRegAnulados")
+            </div>
+            <label class="col-md-3 control-label">
+                Autorizado a Acciones Especiales
+            </label>
+            <div class="col-md-1">
+                @HtmlHelperExtension.FiltroCheckbox("Autorizado a Acciones Especiales", "AutorizadoA_AccionesEspeciales")
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-lg-8">
+                <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+
+                @Html.ActionLink("Exportar", "Exportar", null, new { @class = "btn btn-default" }).DisableIf(() => ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina != true)
+            </div>
+        </div>
+    </div>
+}
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+                <th field="Pagina">
+                    Pagina
+                </th>
+                <th field="RolDeUsuario">
+                    Rol
+                </th>
+                <th field="AutorizadoA_CargarLaPagina" mask="<img style='width: 20px; height:20px;display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    Cargar Pagina
+                </th>
+                <th field="AutorizadoA_OperarLaPagina" mask="<img style='width: 20px; height:20px;display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    Operar Pagina
+                </th>
+                <th field="AutorizadoA_VerRegAnulados" mask="<img style='width: 20px; height:20px;display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    Ver Anulados
+                </th>
+                <th field="AutorizadoA_AccionesEspeciales" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    Acciones Especiales
+                </th>
+                <th field="Id" mask="<a onClick='AgregarCambio($(this));' style='cursor:pointer;' value='{VAL}'>Actualizar</a>">Actualizar</th>
+
+
+            </tr>
+        </thead>
+    </table>
+}
+
+<style>
+    /* Gradient color1 - color2 - color1 */
+
+    hr.style-one {
+        border: 0;
+        height: 1px;
+        background: #333;
+        width: 97.8%;
+        background-image: linear-gradient(to right, #ccc, #333, #ccc);
+    }
+</style>
+<script>
+    function CambiarEstado(img) {
+        img = img.children()
+        var src = $(img).attr("src");
+        var estadoActual = (src.indexOf("True") > 0);
+        if (estadoActual) {
+            var nuevoSrc = src.replace("True", "False");
+            img.attr("value", "false");
+        }
+        else {
+            var nuevoSrc = src.replace("False", "True");
+            img.attr("value", "true");
+        }
+
+        $(img).attr("src", nuevoSrc);
+    };
+
+    function AgregarCambio(child) {
+        for (var i = 2; i < 6; i++) {
+            child.parent().parent().children(":eq(" + i +")").attr("onClick", "CambiarEstado($(this));");
+            child.parent().parent().children(":eq(" + i + ")").children().attr("value", ObtenerEstado(child.parent().parent().children(":eq(" + i + ")")));
+            child.parent().parent().children(":eq(" + i + ")").children().addClass('updating');
+
+        }
+        child.attr('onClick', 'GuardarCambios($(this))');
+        child.html('Guardar');
+        //child.parent().parent().effect("highlight", { color: '#CCCCCC' }, 1500)
+        child.parent().parent().css('background-color', '#ffffbb')
+
+    };
+
+
+    function QuitarCambio(child) {
+        for (var i = 2; i < 6; i++) {
+            child.parent().parent().children(":eq(" + i + ")").attr("onClick", "");
+            child.parent().parent().children(":eq(" + i + ")").children().attr("value", "");
+            child.parent().parent().children(":eq(" + i + ")").children().removeClass('updating');
+
+        }
+        if (child.parent().parent().attr('class')=='odd') {
+            child.parent().parent().css('background-color','#f9f9f9')
+        }
+        else {
+            child.parent().parent().css('background-color', '#ffffff')
+        }
+
+    };
+
+    function GuardarCambios(child) {
+        var cargarPagina = child.parent().parent().children(":eq(2)").children().attr("value");
+        var operarPagina = child.parent().parent().children(":eq(3)").children().attr("value");
+        var verAnulados = child.parent().parent().children(":eq(4)").children().attr("value");
+        var accionesEspeciales = child.parent().parent().children(":eq(5)").children().attr("value");
+        var id = child.attr('value');
+
+
+        var datos = {
+            AutorizadoA_CargarLaPagina: cargarPagina,
+            AutorizadoA_OperarLaPagina: operarPagina,
+            AutorizadoA_VerRegAnulados: verAnulados,
+            AutorizadoA_AccionesEspeciales: accionesEspeciales,
+            Id: id
+        };
+        $.ajax({
+            url: '@Url.Action("UpdateEnListado")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function (retorno) {
+                NotificacionSwal(retorno.Resultado);
+            }
+        });
+        QuitarCambio(child);
+        child.attr('onClick', 'AgregarCambio($(this));')
+        child.html('Actualizar');
+    };
+
+    function ObtenerEstado(obj) {
+        src = obj.children().attr('src');
+        return (src.indexOf("True") > 0);
+    };
+
+    function NotificacionSwal(estado) {
+        if (estado) {
+            NotifNoIntrusive("Los permisos se actualizaron con exito.", "Enhorabuena!", "","mdi mdi-check", "success");
+        }
+        else {
+            NotifNoIntrusive("Ha ocurrido un error.", "Oops!", "","mdi mdi-close-octagon", "error");
+        };
+    };
+</script>
+<script src="~/template/plugins/ui/bootstrap-sweetalert/sweet-alert.js"></script>
+<style>
+    .updating {
+        cursor: pointer;
+    }
+</style>

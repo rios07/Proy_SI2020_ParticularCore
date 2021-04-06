@@ -1,0 +1,43 @@
+﻿<html>
+<head>
+
+</head>
+<body>
+
+<!--The div element for the map -->
+<div id="map" style="height: 400px; width: 50%;"></div>
+<script>
+    // Initialize and add the map
+    function initMap() {
+        // The location of Uluru
+        if ($("#Latitud").val() != null) {
+            var latitud = parseFloat($("#Latitud").val());
+            var longitud = parseFloat($("#Longitud").val());
+            var mapOptions = {
+                center: new google.maps.LatLng(latitud, longitud),
+                zoom: 15
+            };
+            var posi = new google.maps.LatLng({ lat: latitud, lng: longitud });
+        } else {
+            var mapOptions = {
+                center: new google.maps.LatLng(-34.595081, -58.436884),
+                zoom: 12
+            };
+        }
+        //var latitud = parseFloat(Slatitud);
+        //var longitud = parseFloat(Slongitud);
+
+        var mapCanvas = document.getElementById("map");
+        var map = new google.maps.Map(mapCanvas, mapOptions);
+        if ($("#Latitud").val() != null) {
+            var marker = new google.maps.Marker({ position: posi, map: map });
+        }
+    }
+
+</script>
+
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5CN9wgqI27qbp4OLep_29JctwCJ6uxv0&callback=initMap">
+</script>
+</body>
+</html>

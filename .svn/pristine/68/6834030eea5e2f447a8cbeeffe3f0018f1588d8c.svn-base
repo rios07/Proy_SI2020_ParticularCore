@@ -1,0 +1,46 @@
+﻿<script>
+
+    var x = document.getElementById("demo");
+
+    function getLocation() {
+        function errorGeoloc() {
+            MostrarMensaje('Oops!', 'No se pudo cargar la geolocacion, compruebe que este habilitada para el sitio', true)
+        }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, errorGeoloc);
+        } else {
+            x.innerHTML = "No funca la geoloc.";
+        }
+        return false;
+    }
+
+    function showPosition(position) {
+        $("#Latitud").val(position.coords.latitude);
+        $("#Longitud").val(position.coords.longitude);
+        return false;
+    }
+
+    $(function () {
+        $('input[data-val-required], select[data-val-required]').each(function () {
+            var id = this.id;
+            //if (id.includes('Id') && id != 'Id') {
+            //    id = id.substring(0, id.indexOf('Id'));
+            //    $('label[for$=' + id + ']').html($('label[for$=' + id + ']').html() + '(*)');Pe
+            //}
+            //else {
+            if (id != 'Id') {
+                $('label[for$=' + id + ']').html($('label[for$=' + id + ']').html() + ' (*)');
+            }
+            //}
+        });
+
+        
+       
+
+    });
+
+
+
+    
+</script>
+

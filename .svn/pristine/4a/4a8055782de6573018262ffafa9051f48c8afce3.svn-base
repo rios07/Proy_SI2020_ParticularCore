@@ -1,0 +1,205 @@
+﻿@using System.Web.Mvc
+@using System.Web.Mvc.Html
+@using ControladoresCore.Extensiones
+@model ControladoresCore.ViewModels.ReservasDeRecursosVM
+
+@{
+    ViewBag.Title = "Reservas de recursos - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border" id="filterdiv">
+        <div class="row" id="FiltroFechaDePedido">
+            <div class="col-lg-2 control-label ">
+                Fecha de pedido desde
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaDePedidoDesde" id="FechaDePedidoDesde" name="FechaDePedidoDesde" autocomplete="off" type="text" value="01/01/2017">
+                </div>
+            </div>
+            <div class="col-lg-2 control-label">
+                Fecha de pedido hasta
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaDePedidoHasta" id="FechaDePedidoHasta" name="FechaDePedidoHasta" autocomplete="off" type="text" value="01/01/2022">
+                </div>
+            </div>
+
+        </div>
+        <div class="row pt-lg-2" id="FiltroFechaDeInicio">
+            <div class="col-lg-2 control-label ">
+                Fecha de inicio desde
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaDeInicioDesde" id="FechaDeInicioDesde" name="FechaDeInicioDesde" autocomplete="off" type="text" value="01/01/2017">
+                </div>
+            </div>
+            <div class="col-lg-2 control-label">
+                Fecha de inicio hasta
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaDeInicioHasta" id="FechaDeInicioHasta" name="FechaDeInicioHasta" autocomplete="off" type="text" value="01/01/2022">
+                </div>
+            </div>
+
+        </div>
+        <div class="row pt-lg-2" id="FiltroFechaLimite">
+            <div class="col-lg-2 control-label ">
+                Fecha limite desde
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaLimiteDesde" id="FechaLimiteDesde" name="FechaLimiteDesde" autocomplete="off" type="text" value="01/01/2017">
+                </div>
+            </div>
+            <div class="col-lg-2 control-label">
+                Fecha limite hasta
+            </div>
+            <div class="col-lg-4">
+                <div class="input-group" style="max-width: 350px">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    <input class="form-control text-box single-line datetimepicker" filtro="FechaLimiteHasta" id="FechaLimiteHastaFechaLimiteHasta" autocomplete="off" name="FechaLimiteHasta" type="text" value="01/01/2022">
+                </div>
+            </div>
+
+        </div>
+        <div class="row pt-lg-2">
+            <div class="col-lg-2 control-label" style="vertical-align: middle">
+                Usuario Originante
+            </div>
+            <div class="col-lg-4">
+                @Html.DropDownListFor(m => m.UsuarioOriginanteId, new SelectList(Model.UsuariosDDL, "Id", "Nombre", Model.UsuarioOriginanteId
+                    ), "- Todas -", new {filtro = "UsuarioOriginanteId", @class = "form-control  select2" })
+            </div>
+            <div class="col-lg-2 control-label" style="vertical-align: middle">
+                Usuario Destinatario
+            </div>
+            <div class="col-lg-4">
+                @Html.DropDownListFor(m => m.UsuarioDestinatarioId, new SelectList(Model.UsuariosDDL, "Id", "Nombre", Model.UsuarioDestinatarioId
+                    ), "- Todas -", new {filtro = "UsuarioDestinatarioId", @class = "form-control  select2" })
+            </div>
+        </div>
+        <div class="row pt-lg-2">
+            <div class="col-lg-2 control-label" style="vertical-align: middle">
+                Recurso
+            </div>
+            <div class="col-lg-4">
+                @Html.DropDownListFor(m => m.RecursoId, new SelectList(Model.RecursosDDL, "Id", "Nombre", Model.RecursoId
+                    ), "- Todas -", new {filtro = "RecursoId", @class = "form-control  select2" })
+            </div>
+        </div>
+        <div class="row pt-lg-2">
+            <div class="col-lg-8">
+                <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+
+                <div class="btn-group dropup mo-mb-2">
+                    <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                    <div class="dropdown-menu">
+                        @Html.ActionLink("Exportar registros", "Exportar", null, new {@class = "dropdown-item"})
+                        @*<a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>*@
+                        @*<div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Separated link</a>*@
+                    </div>
+                </div>
+                <a class="btn btn-danger removeOnIframe" href="/intranet/Home/Index">Regresar</a>
+            </div>
+        </div>
+    </div>
+}
+
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+        <tr>
+            <th field="Numero">
+                @Html.DisplayNameFor(model => model.Numero)
+            </th>
+            <th field="Recurso">
+                @Html.DisplayNameFor(model => model.Recurso)
+            </th>
+            <th field="UsuarioDestinatario">
+                @Html.DisplayNameFor(model => model.UsuarioDestinatario)
+            </th>
+            <th field="FechaDeInicioParaListado">
+                @Html.DisplayNameFor(model => model.FechaDeInicio)
+            </th>
+            <th field="FechaLimiteParaListado">
+                @Html.DisplayNameFor(model => model.FechaLimite)
+            </th>
+
+
+            @HtmlHelperExtension.Boton("ReservasDeRecursos", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.Seccion)
+        </tr>
+        </thead>
+    </table>
+}
+<script>
+    function GetRadioValue(radioId) {
+        return $('input[name=' + radioId + ']:checked').val();
+    }
+
+
+    var mostrarHora = true;
+
+
+    var divLimite;
+
+    function HideShowFilterFechaLimite() {
+        if (divLimite) {
+            divLimite.prependTo("#filterdiv");
+            divLimite = null;
+        } else {
+            divLimite = $("#FiltroFechaLimite").detach();
+        }
+    }
+
+    var divInicio;
+
+    function HideShowFilterFechaDeInicio() {
+        if (divInicio) {
+            divInicio.prependTo("#filterdiv");
+            divInicio = null;
+        } else {
+            divInicio = $("#FiltroFechaDeInicio").detach();
+        }
+    }
+
+    var divPedido;
+
+    function HideShowFilterFechaDePedido() {
+        if (divPedido) {
+            divPedido.prependTo("#filterdiv");
+            divPedido = null;
+        } else {
+            divPedido = $("#FiltroFechaDePedido").detach();
+        }
+    }
+</script>
+
+<style>
+    .fixedWidth { max-width: 350px; }
+</style>

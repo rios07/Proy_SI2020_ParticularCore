@@ -1,0 +1,64 @@
+﻿<script src="~/template/plugins/forms/summernote/summernote.js"></script>
+<script src="~/template/js/HtmlEditor.js"></script>
+<script src="~/template/plugins/ui/bootstrap-sweetalert/sweet-alert.js"></script>
+<script>
+    
+
+    function PrepararTarea() {
+        var totalPath = location.pathname;
+        var indexController = totalPath.indexOf('/Registro');
+        var controller = totalPath.slice(1, indexController);
+        var indexId = totalPath.lastIndexOf('/');
+        var id = totalPath.slice(indexId + 1);
+        AgregarABotonera('<a class="btn btn-warning" id="NuevaTarea" href="/Tareas/Insert?pTabla=' + controller + '&pRegistroId=' + id + '">Generar tarea</a>')
+
+
+    }
+    function ConfirmarEliminar(btn,accion) {
+        var bool = (btn.attr('value') == 'false');
+        var href = btn.attr('href');
+        var acctionCap = accion[0].toUpperCase() + accion.slice(1);
+        swal({
+            title: "¿Seguro desea "+ accion +" este registro?",
+            type: "warning",
+            showCancelButton: true,
+            confirmButtonClass: "btn-danger",
+            confirmButtonText: acctionCap,
+            cancelButtonText: "No",
+        }).then((value) => {
+            if (value) {
+                window.location.href = href;
+            }
+        });
+
+        return false;
+
+
+    }
+
+    function ValidarEditar(btn, accion) {
+        var bool = (btn.attr('value') == 'false');
+        var href = btn.attr('href');
+        var acctionCap = accion[0].toUpperCase() + accion.slice(1);
+       
+            swal({
+                title: "Oooops... Este Registro no puede ejecutar"+ accion + " porqué esta anulado" ,
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonClass: "btn-danger",
+                confirmButtonText: acctionCap,
+                cancelButtonText: "No",
+            }).then((value) => {
+                if (value) {
+                    window.location.href = href;
+                }
+            });
+            return false;
+       
+        return true;
+
+    }
+
+   
+</script>
+

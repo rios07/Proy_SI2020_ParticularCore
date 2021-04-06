@@ -1,0 +1,30 @@
+﻿@*<!-- CSS: Inicio -->
+<!-- Icons -->
+<link href="template/css/icons.css" rel="stylesheet" />
+<!-- Bootstrap stylesheets (included template modifications) -->
+<link href="template/css/bootstrap.css" rel="stylesheet" />
+<!-- Plugins stylesheets (all plugin custom css) -->
+<link href="template/css/plugins.css" rel="stylesheet" />
+<!-- Main stylesheets (template main css file) -->
+<link href="template/css/main.css" rel="stylesheet" />
+<!-- Custom stylesheets ( Put your own changes here ) -->
+<link href="template/css/custom.css" rel="stylesheet" />
+<!-- CSS: Fin -->
+<!-- SCRIPTS: INICIO -->
+<script src="template/plugins/forms/bootstrap-filestyle/bootstrap-filestyle.js"></script>
+<script src="template/plugins/forms/autosize/jquery.autosize.js"></script>
+<script src="template/plugins/forms/maxlength/bootstrap-maxlength.js"></script>
+<script src="template/plugins/forms/checkall/jquery.checkAll.js"></script>
+<script src="template/plugins/forms/fancyselect/fancySelect.js"></script>
+<script src="template/plugins/forms/validation/jquery.validate.js"></script>
+<script src="template/plugins/forms/validation/additional-methods.min.js"></script>*@
+<!-- SCRIPTS: FIN -->
+<!-- Start #footer  -->
+<p class="pull-left">
+    Copyrights &copy; 2019 <a href="" class="color-blue strong" target="_blank">IATASA</a>. Todos los derechos reservados.
+</p>
+<p class="pull-right">
+    <a href="#" class="mr5">Términos de uso</a>
+    |
+    <a href="#" class="ml5 mr25">Políticas de Privacidad</a>
+</p>

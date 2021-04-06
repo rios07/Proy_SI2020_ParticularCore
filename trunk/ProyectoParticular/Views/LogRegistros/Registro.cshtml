@@ -1,0 +1,90 @@
+﻿@model ControladoresCore.ViewModels.LogRegistrosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "LogErrores - Registro";
+}
+<div class="row">
+    <div class="col-md-10">
+
+    </div>
+
+</div>
+@using (Html.BeginCard("LogError seleccionado"))
+{
+    using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.FechaDeEjecucion, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    <div class="input-group" style="max-width:350px">
+                        <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                        @Html.EditorFor(model => model.FechaDeEjecucion, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                        @Html.ValidationMessageFor(model => model.FechaDeEjecucion, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.Usuario, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.Usuario, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.Usuario, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.Tabla, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.Tabla, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.Tabla, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.RegistroId, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.TextAreaFor(model => model.RegistroId, new { @class = "form-control", disabled = "disabled", @readonly = "readonly", rows = "3" })
+                    @Html.ValidationMessageFor(model => model.RegistroId, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.TipoDeOperacion, htmlAttributes: new { @class = "control-label col-md-3" })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.TipoDeOperacion, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.TipoDeOperacion, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+
+                <div class="col-md-1">
+                    @HtmlHelperExtension.Boton("LogRegistros", "Listado")
+                </div>
+
+            </div>
+        </div>
+    }
+}
+        @*<div id="accordion">
+            <div class="card">
+                <div class="card-header p-0" style="background-color: #adadad;border-color:grey;color:white;" id="headingOne" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            Historia del Registro
+                        </button>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        @Html.Raw(Model.Historia)
+                    </div>
+                </div>
+            </div>
+        </div>*@

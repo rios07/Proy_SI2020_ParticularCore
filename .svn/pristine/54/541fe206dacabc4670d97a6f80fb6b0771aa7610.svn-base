@@ -1,0 +1,1944 @@
+-- =====================================================
+-- Descripción: SPs Prioritarios de 2do orden (B)
+-- Script: 08b_Core__ABMs PrioritariosB_Contextos, Paginas, Tablas y Usuarios.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+
+		-- ABMs que involucran a las Tablas: - INICIO
+				-- Contextos
+				-- RelAsig_RolesDeUsuarios_A_Paginas
+				-- RelAsig_RolesDeUsuarios_A_Usuarios
+				-- Paginas
+				-- Tablas
+				-- Usuarios
+		-- ABMs que involucran a las Tablas: - FIN
+
+
+		-- IGNORAR LOS MENSAJES: (Saltan solo por el orden en que están los SPs)
+			-- The module 'usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles' depends on the missing object 'usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString'. The module will still be created; however, it cannot run successfully until the object exists.
+			-- The module 'usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunRoles' depends on the missing object 'usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString'. The module will still be created; however, it cannot run successfully until the object exists.
+
+
+-- SP-TABLA: Contextos /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Contextos__InsertConAdicionales') IS NOT NULL) DROP PROCEDURE usp_Contextos__InsertConAdicionales
+GO
+CREATE PROCEDURE usp_Contextos__InsertConAdicionales
+-- Agrega el contexto, y luego 5 usuarios. El "administrador" + 4 de testeo: testoperador, testoperadoravanzado, testadministrador, testmasteradmin (con sus respectivos roles); Todos con el Pass = @PassDeUsuarios.
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@Token                                         VARCHAR(40) = ''
+ 
+	,@Nombre                                        VARCHAR(100)
+	,@Codigo                                        VARCHAR(40)
+	,@CarpetaDeContenidos                           VARCHAR(16)
+	,@Observaciones                                 VARCHAR(1000)
+	
+	,@AgregarUsuarios								BIT = '1'
+	,@PassDeUsuarios								VARCHAR(40)
+	
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+	,@id                                            INT		OUTPUT
+AS
+BEGIN TRY
+BEGIN TRAN
+	DECLARE @Tabla VARCHAR(80) = 'Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Insert'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el Insert se inserta el Contexto del Usuario, realizando la validación 1 implicitamente.
+ 
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina) registros de esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	-- 1ero Creamos el Contexto
+	IF @sResSQL = ''
+		BEGIN
+			EXEC usp_Contextos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Token = @Token
+					,@Nombre = @Nombre
+					,@Codigo = @Codigo
+					,@CarpetaDeContenidos = @CarpetaDeContenidos
+					,@Observaciones = @Observaciones
+					,@sResSQL = @sResSQL OUTPUT
+					,@id = @id OUTPUT
+			
+			DECLARE @ContextoId INT = @id -- Para guardarlo y devolverlo al final
+		END
+	
+	-- 2do Creamos los usuarios para testeo de este contexto
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @UltimoLoginSesionId INT
+			DECLARE @RolDeUsuario_Operador_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Operador')
+			DECLARE @RolDeUsuario_OperadorAvanzado_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Operador Avanzado')
+			DECLARE @RolDeUsuario_Administrador_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Administrador')
+			DECLARE @RolDeUsuario_MasterAdmin_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Master Admin')
+			DECLARE @RolDeUsuario_PedirSoportes_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Pedir Soportes')
+			DECLARE @RolDeUsuario_AdministrarSoportes_Id INT = (SELECT id FROM RolesDeUsuarios WHERE Nombre = 'Administrar Soportes')
+			
+			--1ero insertamos al administrador del dominio
+			SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+			INSERT INTO Usuarios (ContextoId, UserName, Pass, Nombre, Apellido, UltimoLoginSesionId) 
+							VALUES (@id, 'administrador', @PassDeUsuarios, 'administrador', @Codigo, @UltimoLoginSesionId)
+			
+			DECLARE @Usuario_Admin_DelContexto_Id INT = (SELECT id FROM Usuarios WHERE ContextoId = @id AND UserName = 'administrador')
+			-- Ahora le asignamos el rol de Administrador
+			INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) 
+							VALUES (@RolDeUsuario_Administrador_Id, @Usuario_Admin_DelContexto_Id, @FechaDeEjecucion)
+			-- También le asignamos el rol de Pedir Soportes
+			INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) 
+							VALUES (@RolDeUsuario_PedirSoportes_Id, @Usuario_Admin_DelContexto_Id, @FechaDeEjecucion)
+							
+			IF @Usuario_Admin_DelContexto_Id IS NULL
+				BEGIN
+					SET @sResSQL = 'El Contexto se creó correctamente, pero no se pudo crear el Administrador, ni ningún usuario.'
+				END
+			
+			IF @sResSQL = '' -- Agrego el usuario que dará soporte en el sistema. 1ero lo agregamos como 'Master Admin', luego le damos el rol.
+				BEGIN
+					SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+					EXEC usp_Usuarios__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@UserName = 'soporte'
+							,@Pass = @PassDeUsuarios
+							,@Nombre = 'Soporte'
+							,@Apellido = 'Sistema'
+							,@Email = ''
+							,@Email2 = ''
+							,@Telefono = ''
+							,@Telefono2 = ''
+							,@Direccion = ''
+							,@Observaciones = ''
+							,@RolDeUsuarioId = @RolDeUsuario_MasterAdmin_Id -- Con el que inicia
+							,@Activo = '1'
+							,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				END
+			
+			IF @sResSQL = '' -- Acá le agregamos a soporte@ el rol de Administrar Soportes. LO TENEMOS QUE AGREGAR SIN EXEC, POR QUE SOLO UN MASTER ADMIN PUEDE CONCEDER ESTE ROL.
+				BEGIN
+					INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde) 
+							VALUES (@RolDeUsuario_PedirSoportes_Id, @id, @FechaDeEjecucion)
+				END
+			
+			IF @sResSQL = '' -- Agregamos al usuario testoperador@ para testear con ese rol
+				BEGIN
+					SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+					EXEC usp_Usuarios__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@UserName = 'testoperador'
+							,@Pass = @PassDeUsuarios
+							,@Nombre = 'test'
+							,@Apellido = 'operador'
+							,@Email = ''
+							,@Email2 = ''
+							,@Telefono = ''
+							,@Telefono2 = ''
+							,@Direccion = ''
+							,@Observaciones = ''
+							,@RolDeUsuarioId = @RolDeUsuario_Operador_Id -- Con el que inicia
+							,@Activo = '1'
+							,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				END
+			
+			IF @sResSQL = '' -- Agregamos al usuario testoperadoravanzado@ para testear con ese rol
+				BEGIN
+					SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+					EXEC usp_Usuarios__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@UserName = 'testoperadoravanzado'
+							,@Pass = @PassDeUsuarios
+							,@Nombre = 'test'
+							,@Apellido = 'operador avanzado'
+							,@Email = ''
+							,@Email2 = ''
+							,@Telefono = ''
+							,@Telefono2 = ''
+							,@Direccion = ''
+							,@Observaciones = ''
+							,@RolDeUsuarioId = @RolDeUsuario_OperadorAvanzado_Id -- Con el que inicia
+							,@Activo = '1'
+							,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				END
+				
+			IF @sResSQL = '' -- Agregamos al usuario testadministrador@ para testear con ese rol
+				BEGIN	
+					SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+					EXEC usp_Usuarios__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@UserName = 'testadministrador'
+							,@Pass = @PassDeUsuarios
+							,@Nombre = 'test'
+							,@Apellido = 'Administrador'
+							,@Email = ''
+							,@Email2 = ''
+							,@Telefono = ''
+							,@Telefono2 = ''
+							,@Direccion = ''
+							,@Observaciones = ''
+							,@RolDeUsuarioId = @RolDeUsuario_Administrador_Id -- Con el que inicia
+							,@Activo = '1'
+							,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				END
+				
+			IF @sResSQL = '' -- Agregamos al usuario testmasteradmin@ para testear con ese rol
+				BEGIN	
+					SET @UltimoLoginSesionId = RAND()*100000000 -- 8 digitos
+					EXEC usp_Usuarios__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@UserName = 'testmasteradmin'
+							,@Pass = @PassDeUsuarios
+							,@Nombre = 'test'
+							,@Apellido = 'Master Admin'
+							,@Email = ''
+							,@Email2 = ''
+							,@Telefono = ''
+							,@Telefono2 = ''
+							,@Direccion = ''
+							,@Observaciones = ''
+							,@RolDeUsuarioId = @RolDeUsuario_MasterAdmin_Id -- Con el que inicia
+							,@Activo = '1'
+							,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				END
+		END
+		
+		-- Insertamos una categoría de informes de ejemplo (para que tenga un "default")
+		IF @sResSQL = ''
+			BEGIN
+				EXEC  usp_CategoriasDeInformes__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@Nombre = '-De ejemplo- "editar!"'
+							,@Observaciones	= ''
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+			END
+			
+		-- Insertamos un tipo de tarea de ejemplo (para que tenga un "default")
+		IF @sResSQL = ''
+			BEGIN
+				EXEC  usp_TiposDeTareas__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@Nombre = '-De ejemplo- "editar!"'
+							,@Observaciones	= ''
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+			END
+		
+		-- Insertamos un grupo de contactos de ejemplo (para que tenga un "default")
+		IF @sResSQL = ''
+			BEGIN
+				EXEC  usp_GruposDeContactos__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@Nombre = '-De ejemplo- "editar!"'
+							,@Observaciones	= ''
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+			END
+				
+		-- Insertamos una Asignación de Tipos de Contactos al Contexto tipo de tarea de ejemplo (para que tenga un "default")
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @TipoDeContactoId INT = (SELECT id FROM TiposDeContactos WHERE Nombre = ' -Sin indicar-')
+				EXEC  usp_RelAsig_TiposDeContactos_A_Contextos__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@TipoDeContactoId = @TipoDeContactoId
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+					
+				SET @TipoDeContactoId = (SELECT id FROM TiposDeContactos WHERE Nombre = 'Clientes')
+				EXEC  usp_RelAsig_TiposDeContactos_A_Contextos__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@TipoDeContactoId = @TipoDeContactoId
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+					
+				SET @TipoDeContactoId = (SELECT id FROM TiposDeContactos WHERE Nombre = 'Proveedores')
+				EXEC  usp_RelAsig_TiposDeContactos_A_Contextos__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@TipoDeContactoId = @TipoDeContactoId
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+					
+				SET @TipoDeContactoId = (SELECT id FROM TiposDeContactos WHERE Nombre = 'Transportistas')
+				EXEC  usp_RelAsig_TiposDeContactos_A_Contextos__Insert  
+							@UsuarioQueEjecutaId = @Usuario_Admin_DelContexto_Id -- Va con el Administrador, para que tome ese contexto.
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@TipoDeContactoId = @TipoDeContactoId
+							,@sResSQL = @sResSQL OUTPUT
+							,@id = @id OUTPUT
+			END
+			
+			SET @id = @ContextoId -- Recupero el @id
+			
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Contextos__Insert') IS NOT NULL) DROP PROCEDURE usp_Contextos__Insert
+GO
+CREATE PROCEDURE usp_Contextos__Insert
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@Token                                         VARCHAR(40) = ''
+ 
+	,@Nombre                                        VARCHAR(100)
+	,@Codigo                                        VARCHAR(40)
+	,@CarpetaDeContenidos                           VARCHAR(16)
+	,@Observaciones                                 VARCHAR(1000)
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+	,@id                                            INT		OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Insert'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el Insert se inserta el Contexto del Usuario, realizando la validación 1 implicitamente.
+ 
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina) registros de esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Numero INT
+			EXEC @Numero = ufc_ValorSiguiente @Tabla = @Tabla, @Campo = 'Numero'
+ 
+			SET NOCOUNT ON
+			INSERT INTO Contextos
+			(
+				Numero
+				,Nombre
+				,Codigo
+				,CarpetaDeContenidos
+				,Observaciones
+			)
+			VALUES
+			(
+				@Numero
+				,@Nombre
+				,LOWER(@Codigo) -- Para que no se repita con Mayúsculas
+				,@CarpetaDeContenidos
+				,@Observaciones
+			)
+			SET @id = SCOPE_IDENTITY()
+ 
+			-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+			EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_Contextos__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Contextos__Update_by_@id
+GO
+CREATE PROCEDURE usp_Contextos__Update_by_@id
+	 @id                                            INT
+ 
+	,@UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@Token                                         VARCHAR(40) = ''
+ 
+	,@Nombre                                        VARCHAR(100)
+	,@Codigo                                        VARCHAR(40)
+	,@CarpetaDeContenidos                           VARCHAR(16)
+	,@Observaciones                                 VARCHAR(1000)
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Update'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN
+			EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			UPDATE Contextos
+			SET
+				Nombre = @Nombre
+				,Codigo = LOWER(@Codigo) -- Para que no se repita con Mayúsculas
+				,CarpetaDeContenidos = @CarpetaDeContenidos
+				,Observaciones = @Observaciones
+			FROM Contextos
+			WHERE id = @id
+ 
+			-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+			EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Contextos /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /ABMs/ - INICIO // Las Necesito 1ero que a Tablas y Paginas:
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+				
+		,@PaginaId							INT	
+		
+		,@RolMenosPrioritarioQueCarga				VARCHAR(30)
+		,@RolMenosPrioritarioQueOpera				VARCHAR(30)
+		,@RolMenosPrioritarioQueVerRegAnulados		VARCHAR(30)
+		,@RolMenosPrioritarioQueAccionesEspeciales	VARCHAR(30)
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			,@id INT = @PaginaId -- Solo por compatibilidad, adentro no lo utiliza por q no tiene ContextoId
+			
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @RolDeUsuarioId		INT
+				
+				-- 1ero, SETEO TODOS LOS ROLES A LA PÁGINA, EN CERO
+				INSERT INTO RelAsig_RolesDeUsuarios_A_Paginas 
+				(
+					RolDeUsuarioId
+					,PaginaId
+					,AutorizadoA_CargarLaPagina
+					,AutorizadoA_OperarLaPagina
+					,AutorizadoA_VerRegAnulados 
+					,AutorizadoA_AccionesEspeciales
+				) 
+				SELECT	id			
+					,@PaginaId		
+					,'0'						
+					,'0'					
+					,'0'
+					,'0'
+				FROM RolesDeUsuarios RDU  -- <-- TODOS
+									
+				DECLARE @Prioridad INT
+				
+				--AND (RDU.SeMuestraEnAsignacionDePermisos = '1') <-- NO VA. Acá asignamos todos, no importa si se muesrtan o nó
+				
+				-- A) Carga:
+				SELECT @Prioridad = Prioridad FROM RolesDeUsuarios WHERE Nombre = @RolMenosPrioritarioQueCarga
+				DECLARE @RolesIdsString_CargarLaPagina	VARCHAR(1000)
+				IF (@Prioridad < 0)  -- Las prioridades negativas las utilizamos para aplicar roles puntuales
+					BEGIN -- Es 1 solo rol en particular
+						SELECT @RolesIdsString_CargarLaPagina = CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE RDU.Prioridad = @Prioridad
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+				ELSE
+					BEGIN -- Es una asignación de 1 o más roles que hay q concatenar
+						SELECT @RolesIdsString_CargarLaPagina = COALESCE(@RolesIdsString_CargarLaPagina + ', ', '') + CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE (RDU.Prioridad > 0) AND (RDU.Prioridad <= @Prioridad)
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+				
+				-- B) Opera:
+				SELECT @Prioridad = Prioridad FROM RolesDeUsuarios WHERE Nombre = @RolMenosPrioritarioQueOpera
+				DECLARE @RolesIdsString_OperarLaPagina	VARCHAR(1000)
+				IF (@Prioridad < 0)  -- Las prioridades negativas las utilizamos para aplicar roles puntuales
+					BEGIN -- Es 1 solo rol en particular
+						SELECT @RolesIdsString_OperarLaPagina = CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE RDU.Prioridad = @Prioridad
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+				ELSE
+					BEGIN -- Es una asignación de 1 o más roles que hay q concatenar
+						SELECT @RolesIdsString_OperarLaPagina = COALESCE(@RolesIdsString_OperarLaPagina + ', ', '') + CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE (RDU.Prioridad > 0) AND (RDU.Prioridad <= @Prioridad)
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+					
+				-- C) VerRegAnulados:
+				SELECT @Prioridad = Prioridad FROM RolesDeUsuarios WHERE Nombre = @RolMenosPrioritarioQueVerRegAnulados
+				DECLARE @RolesIdsString_VerRegAnulados	VARCHAR(1000)
+				IF (@Prioridad < 0)  -- Las prioridades negativas las utilizamos para aplicar roles puntuales
+					BEGIN -- Es 1 solo rol en particular
+						SELECT @RolesIdsString_VerRegAnulados = CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE RDU.Prioridad = @Prioridad
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+				ELSE
+					BEGIN -- Es una asignación de 1 o más roles que hay q concatenar
+						SELECT @RolesIdsString_VerRegAnulados = COALESCE(@RolesIdsString_VerRegAnulados + ', ', '') + CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE (RDU.Prioridad > 0) AND (RDU.Prioridad <= @Prioridad)
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+					
+				-- D) AccionesEspeciales:
+				SELECT @Prioridad = Prioridad FROM RolesDeUsuarios WHERE Nombre = @RolMenosPrioritarioQueAccionesEspeciales
+				DECLARE @RolesIdsString_AccionesEspeciales	VARCHAR(1000)
+				IF (@Prioridad < 0)  -- Las prioridades negativas las utilizamos para aplicar roles puntuales
+					BEGIN -- Es 1 solo rol en particular
+						SELECT @RolesIdsString_AccionesEspeciales = CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE RDU.Prioridad = @Prioridad
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+				ELSE
+					BEGIN -- Es una asignación de 1 o más roles que hay q concatenar
+						SELECT @RolesIdsString_AccionesEspeciales = COALESCE(@RolesIdsString_AccionesEspeciales + ', ', '') + CAST(id AS VARCHAR(MAX)) 
+						FROM RolesDeUsuarios RDU
+						WHERE (RDU.Prioridad > 0) AND (RDU.Prioridad <= @Prioridad)
+							--AND (RDU.SeMuestraEnAsignacionDePermisos = '1')
+					END
+					
+				
+				-- Ahora Asignamos todos esos roles a la Pagina
+				EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString @UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+					,@FechaDeEjecucion = @FechaDeEjecucion
+					,@PaginaId = @PaginaId
+					,@RolesIdsString_CargarLaPagina = @RolesIdsString_CargarLaPagina
+					,@RolesIdsString_OperarLaPagina = @RolesIdsString_OperarLaPagina
+					,@RolesIdsString_VerRegAnulados = @RolesIdsString_VerRegAnulados
+					,@RolesIdsString_AccionesEspeciales = @RolesIdsString_AccionesEspeciales
+					,@sResSQL = @sResSQL OUTPUT
+					
+			END
+		
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+				
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunRoles') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunRoles
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunRoles
+		@UsuarioQueEjecutaId					INT
+		,@FechaDeEjecucion						DATETIME
+		,@Token									VARCHAR(40) = ''
+				
+		,@PaginaId								INT	
+		
+		,@RolesIdsString_CargarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_OperarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_VerRegAnulados			VARCHAR(1000)
+		,@RolesIdsString_AccionesEspeciales		VARCHAR(1000)	
+		
+		,@sResSQL								VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			,@id INT = @PaginaId -- Solo por compatibilidad, adentro no lo utiliza por q no tiene ContextoId
+			
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @RolDeUsuarioId		INT
+				
+				
+				
+				-- 1ero, SETEO TODOS LOS ROLES A LA PÁGINA, EN CERO
+				INSERT INTO RelAsig_RolesDeUsuarios_A_Paginas 
+				(
+					RolDeUsuarioId
+					,PaginaId
+					,AutorizadoA_CargarLaPagina
+					,AutorizadoA_OperarLaPagina
+					,AutorizadoA_VerRegAnulados 
+					,AutorizadoA_AccionesEspeciales
+				) 
+				SELECT	id			
+					,@PaginaId		
+					,'0'						
+					,'0'					
+					,'0'
+					,'0'
+				FROM RolesDeUsuarios RDU  -- <-- TODOS
+									
+				-- Ahora Asignamos todos esos roles a la Pagina
+				EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString @UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+					,@FechaDeEjecucion = @FechaDeEjecucion
+					,@PaginaId = @PaginaId
+					,@RolesIdsString_CargarLaPagina = @RolesIdsString_CargarLaPagina
+					,@RolesIdsString_OperarLaPagina = @RolesIdsString_OperarLaPagina
+					,@RolesIdsString_VerRegAnulados = @RolesIdsString_VerRegAnulados
+					,@RolesIdsString_AccionesEspeciales = @RolesIdsString_AccionesEspeciales
+					,@sResSQL = @sResSQL OUTPUT
+			END
+				
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+			
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__Insert') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Insert
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+				
+		,@RolDeUsuarioId					INT	
+		,@PaginaId							INT	
+		,@AutorizadoA_CargarLaPagina		BIT	
+		,@AutorizadoA_OperarLaPagina		BIT
+		,@AutorizadoA_VerRegAnulados		BIT		
+		,@AutorizadoA_AccionesEspeciales	BIT	
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				SET NOCOUNT ON
+				INSERT INTO RelAsig_RolesDeUsuarios_A_Paginas
+				(
+					RolDeUsuarioId
+					,PaginaId
+					,AutorizadoA_CargarLaPagina	
+					,AutorizadoA_OperarLaPagina	
+					,AutorizadoA_VerRegAnulados
+					,AutorizadoA_AccionesEspeciales
+				)
+				VALUES
+				(
+					@RolDeUsuarioId
+					,@PaginaId
+					,@AutorizadoA_CargarLaPagina	
+					,@AutorizadoA_OperarLaPagina	
+					,@AutorizadoA_VerRegAnulados
+					,@AutorizadoA_AccionesEspeciales
+				)
+				
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@id								INT	
+		,@AutorizadoA_CargarLaPagina		BIT	
+		,@AutorizadoA_OperarLaPagina		BIT
+		,@AutorizadoA_VerRegAnulados		BIT
+		,@AutorizadoA_AccionesEspeciales	BIT
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				SET NOCOUNT ON
+				UPDATE RelAsig_RolesDeUsuarios_A_Paginas
+				SET
+					AutorizadoA_CargarLaPagina	= @AutorizadoA_CargarLaPagina
+					,AutorizadoA_OperarLaPagina	= @AutorizadoA_OperarLaPagina
+					,AutorizadoA_VerRegAnulados = @AutorizadoA_VerRegAnulados
+					,AutorizadoA_AccionesEspeciales = @AutorizadoA_AccionesEspeciales
+				FROM RelAsig_RolesDeUsuarios_A_Paginas
+				WHERE id = @id
+				
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@RolesIdsString
+		@UsuarioQueEjecutaId					INT
+		,@FechaDeEjecucion						DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@PaginaId								INT
+		,@RolesIdsString_CargarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_OperarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_VerRegAnulados			VARCHAR(1000)
+		,@RolesIdsString_AccionesEspeciales		VARCHAR(1000)
+		
+		,@sResSQL								VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			,@id INT = @PaginaId -- Solo por compatibilidad, adentro no lo utiliza por q no tiene ContextoId
+			
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				-- SI LOS STRINGS VIENEN CON UN '0' --> SE AGREGAN TODOS LOS ROLES !.
+			
+				--A)  CargarLaPagina
+				UPDATE RelAsig_RolesDeUsuarios_A_Paginas 
+				SET AutorizadoA_CargarLaPagina = '1'
+				WHERE (PaginaId = @PaginaId)
+					AND (
+							(RolDeUsuarioId IN(SELECT id FROM ufc_IdsString_ToTable_INT(@RolesIdsString_CargarLaPagina)))
+							OR (@RolesIdsString_CargarLaPagina = '0') -- o sea, todos los roles
+						)
+					
+				--B)  OperarLaPagina
+				UPDATE RelAsig_RolesDeUsuarios_A_Paginas 
+				SET AutorizadoA_OperarLaPagina = '1'
+				WHERE (PaginaId = @PaginaId)
+					AND (
+							(RolDeUsuarioId IN(SELECT id FROM ufc_IdsString_ToTable_INT(@RolesIdsString_OperarLaPagina)))
+							OR (@RolesIdsString_OperarLaPagina = '0') -- o sea, todos los roles
+						)
+					
+				--C)  VerRegAnulados
+				UPDATE RelAsig_RolesDeUsuarios_A_Paginas 
+				SET AutorizadoA_VerRegAnulados = '1'
+				WHERE (PaginaId = @PaginaId)
+					AND (
+							(RolDeUsuarioId IN(SELECT id FROM ufc_IdsString_ToTable_INT(@RolesIdsString_VerRegAnulados)))
+							OR (@RolesIdsString_VerRegAnulados = '0') -- o sea, todos los roles
+						)
+					
+				--D)  AccionesEspeciales
+				UPDATE RelAsig_RolesDeUsuarios_A_Paginas 
+				SET AutorizadoA_AccionesEspeciales = '1'
+				WHERE (PaginaId = @PaginaId)
+					AND (
+							(RolDeUsuarioId IN(SELECT id FROM ufc_IdsString_ToTable_INT(@RolesIdsString_AccionesEspeciales)))
+							OR (@RolesIdsString_AccionesEspeciales = '0') -- o sea, todos los roles
+						)
+			
+				--SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				--EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				--	,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				--	,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+				
+			END
+		
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Usuarios /ABMs/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Usuarios__Delete_by_@UsuarioId') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Delete_by_@UsuarioId
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Delete_by_@UsuarioId
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		,@Token								VARCHAR(40) = ''	
+		,@sResSQL						VARCHAR(1000)	OUTPUT
+		
+		,@UsuarioId						INT
+	AS
+	BEGIN
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Usuarios'
+		-- Operar en Registro --> Permiso de DELETE o Activo/Anulado
+			,@FuncionDePagina VARCHAR(30) = 'Registro' 
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		SET @Tabla = 'Usuarios' -- eSTA ES DIFERENTE, Acá lo valido contra la tabla Usuarios
+		DECLARE @id INT = @UsuarioId
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				SET @Tabla = 'RelAsig_RolesDeUsuarios_A_Usuarios' -- VUELVO A SETEAR LA TABLA EN CUESTIÓN.
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF (@sResSQL = '')
+			BEGIN
+				SET NOCOUNT ON
+							
+				DELETE RelAsig_RolesDeUsuarios_A_Usuarios 
+				FROM RelAsig_RolesDeUsuarios_A_Usuarios RARU
+					INNER JOIN RolesDeUsuarios RDU ON RARU.RolDeUsuarioId = RDU.id
+				WHERE RARU.UsuarioId = @UsuarioId AND RDU.SeMuestraEnAsignacionDePermisos = '1'
+				
+				--EXEC @sResSQL = [dbo].ufc_ResultadoOperacion__Delete  @RegistrosAfectados = @@ROWCOUNT
+				SET @sResSQL = ''
+				--IF @sResSQL = ''
+				--	BEGIN -- Registro el Log
+				--		EXEC usp_LogRegistros__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @Tabla = @Tabla
+				--		, @RegistroId = @id, @TipoDeOperacionId = '3', @FechaDeEjecucion = @FechaDeEjecucion
+				--	END
+			END
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Usuarios__Insert') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Insert
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+				
+		,@RolDeUsuarioId					INT	
+		,@UsuarioId							INT	
+		,@FechaDesde						DATE
+		,@FechaHasta						DATE = NULL
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Usuarios' 
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				SET NOCOUNT ON
+				INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios
+				(
+					RolDeUsuarioId
+					,UsuarioId
+					,FechaDesde
+					,FechaHasta
+				)
+				VALUES
+				(
+					@RolDeUsuarioId
+					,@UsuarioId
+					,@FechaDesde
+					,@FechaHasta
+				)
+				
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Usuarios__Update_by_@UsuarioId') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Update_by_@UsuarioId
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Update_by_@UsuarioId
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@UsuarioId							INT
+		,@RolesIdsStringA_Agregar			VARCHAR(1000)	
+		--,@RolesIdsStringA_Eliminar			VARCHAR(1000)	
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Usuarios' 
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		SET @Tabla = 'Usuarios' -- Esta es diferente, la valido con Usuarios
+		DECLARE @id INT = @UsuarioId
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				SET @Tabla = 'RelAsig_RolesDeUsuarios_A_Usuarios' -- VUELVO A SETEAR LA TABLA EN CUESTIÓN.
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+		
+		IF @sResSQL = '' 
+			BEGIN
+				SET NOCOUNT ON
+				-- 1ero elimino todos
+				DELETE RelAsig_RolesDeUsuarios_A_Usuarios 
+				FROM RelAsig_RolesDeUsuarios_A_Usuarios 
+				WHERE 
+					(UsuarioId = @UsuarioId)
+					--AND
+					--(RolDeUsuarioId IN (SELECT id FROM ufc_IdsString_ToTable_INT(@RolesIdsStringA_Eliminar)))
+			
+				-- LO SIGUIENTE NO APLICA EN ESTA FUNCION
+				--EXEC @sResSQL = [dbo].ufc_ResultadoOperacion__Update  @RegistrosAfectados = @@ROWCOUNT
+
+				--IF @sResSQL = ''
+				--	BEGIN
+				
+				-- 2do, agrego
+						INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId)
+							SELECT id, @UsuarioId  FROM ufc_IdsString_ToTable_INT(@RolesIdsStringA_Agregar)
+					--END		
+				
+				--EXEC usp_LogRegistros__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @Tabla = @Tabla
+				--, @RegistroId = @id, @TipoDeOperacionId = '2', @FechaDeEjecucion = @FechaDeEjecucion
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Usuarios /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Paginas /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Paginas__Insert') IS NOT NULL) DROP PROCEDURE usp_Paginas__Insert -- NO HAY UN SP "usp_Paginas__Insert"
+GO
+IF (OBJECT_ID('usp_Paginas__InsertSegunPrioridadRoles') IS NOT NULL) DROP PROCEDURE usp_Paginas__InsertSegunPrioridadRoles
+GO
+-- EsSTE SP SE UTILIZA EN EL PASO 2 del siguiente procedimiento, como parte del proceso automático de creación de las Páginas (asociadas), al crear una Tabla
+-- El Insert de las tablas tiene un encadenamiento de 3 niveles:
+-- 1: Genera la tabla en cuestion --> Llama (EXECUTE) al SP "usp_Paginas__Insert" n veces (donde n son las FuncionesDePaginas existentes).
+-- 2: CADA EXECUTE indicado en 1 va generando TODAS las Páginas q incluyen la tabla Insertada, y dentro de c/u llama (EXECUTE) al SP: "usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles" 
+-- 3: EL EXECUTE INDICADO EN 2 va Insertando TODOS los RolesDeusuarios con permisos a esa Página.
+CREATE PROCEDURE usp_Paginas__InsertSegunPrioridadRoles
+		@UsuarioQueEjecutaId						INT
+		,@FechaDeEjecucion							DATETIME
+		,@Token										VARCHAR(40) = ''
+					
+		,@TablaId									INT	
+		,@FuncionDePaginaId							INT	
+		,@RolMenosPrioritarioQueCarga				VARCHAR(30)
+		,@RolMenosPrioritarioQueOpera				VARCHAR(30)
+		,@RolMenosPrioritarioQueVerRegAnulados		VARCHAR(30)
+		,@RolMenosPrioritarioQueAccionesEspeciales	VARCHAR(30)
+		,@Nombre									VARCHAR(100) = ''
+		,@Titulo									VARCHAR(100) = ''
+		,@Tips										VARCHAR(2000) = ''		
+		,@Observaciones								VARCHAR(2000) = ''	
+		,@SeMuestraEnAsignacionDePermisos			BIT	= 1
+		
+		,@sResSQL									VARCHAR(1000)	OUTPUT
+		,@id										INT		OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Funcion VARCHAR(100) = (SELECT ' - ' + NombreAMostrar FROM FuncionesDePaginas WHERE id = @FuncionDePaginaId)
+				
+				IF (@Nombre = '')
+					BEGIN
+						SELECT @Nombre = Nombre + @Funcion FROM Tablas WHERE id = @TablaId
+					END
+				
+				IF (@Titulo = '')
+					BEGIN
+						SELECT @Titulo = NombreAMostrar + @Funcion FROM Tablas WHERE id = @TablaId
+					END
+					
+				SET NOCOUNT ON
+				INSERT INTO Paginas
+				(
+					TablaId
+					,FuncionDePaginaId
+					,Nombre
+					,Titulo
+					,Tips
+					,Observaciones
+					,SeMuestraEnAsignacionDePermisos
+				)
+				VALUES
+				(
+					@TablaId
+					,@FuncionDePaginaId
+					,@Nombre
+					,@Titulo
+					,@Tips
+					,@Observaciones
+					,@SeMuestraEnAsignacionDePermisos
+				)
+				
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			
+				IF @sResSQL = ''
+					BEGIN	
+						-- INSERTO LOS PERMISOS DE ROLES DE USUARIO A LAS PÁGINAS.
+						-- Al llamar al siguiente SP va a generar para la página TODOS los RolesDeusuarios con permisos a esa Página
+						-- , EN FUNCION DE LA PRIORIDAD DEL ROL INDICADO.
+						-- Asignándole a cada Página todos los roles con una Prioridad Mayor o igual (Menor número) al Rol q se le pasa.
+						EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles @UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@PaginaId = @id
+							,@RolMenosPrioritarioQueCarga = @RolMenosPrioritarioQueCarga
+							,@RolMenosPrioritarioQueOpera = @RolMenosPrioritarioQueOpera
+							,@RolMenosPrioritarioQueVerRegAnulados = @RolMenosPrioritarioQueVerRegAnulados
+							,@RolMenosPrioritarioQueAccionesEspeciales = @RolMenosPrioritarioQueAccionesEspeciales
+							,@sResSQL = @sResSQL OUTPUT
+					END
+			END
+	
+	IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+	
+	
+	
+	
+IF (OBJECT_ID('usp_Paginas__InsertSegunRoles') IS NOT NULL) DROP PROCEDURE usp_Paginas__InsertSegunRoles
+GO
+-- ESTE SP SE UTILIZA PARA DIRECTAMENTE CREAR UNA PÁGINA, Y ENCADENADAMENTE, ASIGNARLE LOS ROLES INDICADOS EN LOS "@RolesIdsString_..."
+CREATE PROCEDURE usp_Paginas__InsertSegunRoles
+		@UsuarioQueEjecutaId					INT
+		,@FechaDeEjecucion						DATETIME
+		,@Token									VARCHAR(40) = ''
+		
+		,@TablaId								INT	
+		,@FuncionDePaginaId						INT	
+		,@RolesIdsString_CargarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_OperarLaPagina			VARCHAR(1000)
+		,@RolesIdsString_VerRegAnulados			VARCHAR(1000)
+		,@RolesIdsString_AccionesEspeciales		VARCHAR(1000)	
+		,@Nombre								VARCHAR(100) = ''
+		,@Titulo								VARCHAR(100) = ''
+		,@Tips									VARCHAR(2000) = ''		
+		,@Observaciones							VARCHAR(2000) = ''	
+		,@SeMuestraEnAsignacionDePermisos		BIT	= 1
+		
+		,@sResSQL								VARCHAR(1000)	OUTPUT
+		,@id									INT		OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		IF (@sResSQL = '')
+			BEGIN
+				DECLARE @Funcion VARCHAR(100)
+				SELECT @Funcion = ' - ' + Nombre FROM FuncionesDePaginas WHERE id = @FuncionDePaginaId
+				
+				IF (@Nombre = '')
+					BEGIN
+						SELECT @Nombre = Nombre + @Funcion FROM Tablas WHERE id = @TablaId
+					END
+				
+				IF (@Titulo = '')
+					BEGIN
+						SELECT @Titulo = NombreAMostrar + @Funcion FROM Tablas WHERE id = @TablaId
+					END
+					
+				SET NOCOUNT ON
+				INSERT INTO Paginas
+				(
+					TablaId
+					,FuncionDePaginaId
+					,Nombre
+					,Titulo
+					,Tips
+					,Observaciones
+					,SeMuestraEnAsignacionDePermisos
+				)
+				VALUES
+				(
+					@TablaId
+					,@FuncionDePaginaId
+					,@Nombre
+					,@Titulo
+					,@Tips
+					,@Observaciones
+					,@SeMuestraEnAsignacionDePermisos
+				)
+				
+				SET @id = SCOPE_IDENTITY()
+		
+				---- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+
+				IF @sResSQL = ''
+					BEGIN	
+						-- Al llamar al siguiente SP y pasarle los strings de ids de Roles, va a generar para cada página
+						-- TODOS los RolesDeusuarios con permisos a esa Página.
+						EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunRoles @UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+							,@FechaDeEjecucion = @FechaDeEjecucion
+							,@PaginaId = @id
+							,@RolesIdsString_CargarLaPagina = @RolesIdsString_CargarLaPagina
+							,@RolesIdsString_OperarLaPagina = @RolesIdsString_OperarLaPagina
+							,@RolesIdsString_VerRegAnulados = @RolesIdsString_VerRegAnulados
+							,@RolesIdsString_AccionesEspeciales = @RolesIdsString_AccionesEspeciales
+							,@sResSQL = @sResSQL OUTPUT
+					END
+			END
+	
+	IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Paginas__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Paginas__Update_by_@id
+GO
+CREATE PROCEDURE usp_Paginas__Update_by_@id
+		@id								INT	
+		
+		,@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token							VARCHAR(40) = ''
+		
+		--,@TablaId						INT	
+		--,@FuncionDePaginaId				INT	
+		,@Nombre						VARCHAR(100)
+		,@Titulo						VARCHAR(100)
+		,@Tips							VARCHAR(2000)
+		,@Observaciones					VARCHAR(2000)
+		,@SeMuestraEnAsignacionDePermisos	BIT	
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Paginas'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Paginas
+				SET
+					--TablaId = @TablaId
+					--,FuncionDePaginaId = @FuncionDePaginaId
+					Nombre = @Nombre
+					,Titulo = @Titulo
+					,Tips = @Tips
+					,Observaciones = @Observaciones
+					,SeMuestraEnAsignacionDePermisos = @SeMuestraEnAsignacionDePermisos
+				FROM Paginas
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Paginas /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Tablas /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Tablas__Insert') IS NOT NULL) DROP PROCEDURE usp_Tablas__Insert
+GO
+-- El Insert de las tablas tiene un encadenamiento de 3 niveles:
+-- 1: Genera la tabla en cuestion --> Llama (EXECUTE) al SP "usp_Paginas__Insert" n veces (donde n son las FuncionesDePaginas existentes).
+-- 2: CADA EXECUTE indicado en 1 va generando TODAS las Páginas q incluyen la tabla insertada, y dentro de c/u llama (EXECUTE) al SP: "usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles" 
+-- 3: EL EXECUTE INDICADO EN 2 va insertando TODOS los RolesDeusuarios con permisos a esa Página.
+CREATE PROCEDURE usp_Tablas__Insert
+		@UsuarioQueEjecutaId						INT
+		,@FechaDeEjecucion							DATETIME
+		,@Token										VARCHAR(40) = ''
+	
+		,@IconoCSSId								INT
+		,@Nombre									VARCHAR(80)
+		,@NombreAMostrar							VARCHAR(100)
+		,@Nomenclatura								VARCHAR(12)	
+		,@Observaciones								VARCHAR(1000)
+		,@LlevaActivo								BIT
+		,@PermiteEliminar							BIT
+		,@TablaDeCore								BIT
+		,@SeCreanPaginas							BIT
+		,@TieneArchivos								BIT
+		
+		-- Los siguientes son para asignarles a las páginas de las tablas
+		,@RolMenosPrioritarioQueCarga				VARCHAR(30)
+		,@RolMenosPrioritarioQueOpera				VARCHAR(30)
+		,@RolMenosPrioritarioQueVerRegAnulados		VARCHAR(30)
+		,@RolMenosPrioritarioQueAccionesEspeciales	VARCHAR(30)
+		
+		-- Los siguientes son enfocados en los parámetros de desición en la Generación de SPs Automáticos:
+		,@CampoAMostrarEnFK							VARCHAR(100) = 'Nombre' -- Es el campo (de la propia tabla) que se muestra, por ejemplo, en un listado DDL cuando es FK de otra tabla.
+		,@CamposQuePuedenSerIdsString				VARCHAR(100) = '' -- Es el campo (de la propia tabla) que puede ser entrada IdsString --> genera un SP #NombreTabla@__Insert_by_@#NombreCampo#IdsString.
+		,@CamposAExcluirEnElInsert					VARCHAR(1000) = '' -- Separados por comas. Por Ejemplo: 'Nombre, Apellido' (id y Numero se excluyen siempre). Sirve para Generador de SPs.
+		,@CamposAExcluirEnElUpdate					VARCHAR(1000) = '' -- Separados por comas. Por Ejemplo: 'Nombre, Apellido' (id, Activo y Numero se excluyen siempre). Sirve para Generador de SPs.
+		,@CamposAExcluirEnElListado					VARCHAR(1000) = '' -- Separados por comas. Por Ejemplo: 'Nombre, Apellido'.
+		,@CamposAIncluirEnFiltrosDeListado			VARCHAR(1000) = '' -- Separados por comas. Por Ejemplo: 'Nombre, Apellido'.
+		,@PermiteInsertAnonimamente					BIT = '0' -- Con un usuario que no está logueado.
+		,@PermiteListarDDLAnonimamente				BIT = '0' -- Con un usuario que no está logueado.
+		,@SeGeneranAutoSusSPsDeABM					BIT = '1' -- Con el Generador de SPs.
+		,@SeGeneranAutoSusSPsDeRegistros			BIT = '1' -- Con el Generador de SPs.
+		,@SeGeneranAutoSusSPsDeListados				BIT = '1' -- Con el Generador de SPs.
+	
+		,@sResSQL									VARCHAR(1000)	OUTPUT
+		,@id										INT		OUTPUT							
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'Tablas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF (@sResSQL = '') AND (@LlevaActivo = 1) AND (@PermiteEliminar = 1)
+			BEGIN
+				SET @sResSQL = 'Se produjo un error, los campos "LlevaActivo" y "PermiteEliminar" no pueden ser ambos "1".'
+			END
+		
+		IF (@sResSQL = '')
+			BEGIN	
+				SET NOCOUNT ON
+				INSERT INTO Tablas
+				(
+					IconoCSSId
+					,Nombre
+					,NombreAMostrar
+					,Nomenclatura
+					,Observaciones
+					,LlevaActivo
+					,PermiteEliminar
+					,TablaDeCore
+					,SeCreanPaginas
+					,TieneArchivos
+					,CampoAMostrarEnFK
+					,CamposQuePuedenSerIdsString
+					,CamposAExcluirEnElInsert
+					,CamposAExcluirEnElUpdate
+					,CamposAExcluirEnElListado
+					,CamposAIncluirEnFiltrosDeListado
+					,PermiteInsertAnonimamente
+					,PermiteListarDDLAnonimamente
+					,SeGeneranAutoSusSPsDeABM
+					,SeGeneranAutoSusSPsDeRegistros
+					,SeGeneranAutoSusSPsDeListados
+				)
+				VALUES
+				(
+					@IconoCSSId
+					,@Nombre
+					,@NombreAMostrar
+					,@Nomenclatura
+					,@Observaciones
+					,@LlevaActivo
+					,@PermiteEliminar
+					,@TablaDeCore
+					,@SeCreanPaginas
+					,@TieneArchivos
+					,@CampoAMostrarEnFK
+					,@CamposQuePuedenSerIdsString
+					,@CamposAExcluirEnElInsert
+					,@CamposAExcluirEnElUpdate
+					,@CamposAExcluirEnElListado
+					,@CamposAIncluirEnFiltrosDeListado
+					,@PermiteInsertAnonimamente
+					,@PermiteListarDDLAnonimamente
+					,@SeGeneranAutoSusSPsDeABM
+					,@SeGeneranAutoSusSPsDeRegistros
+					,@SeGeneranAutoSusSPsDeListados
+				)
+		
+				SET @id = SCOPE_IDENTITY()
+						
+				DECLARE @RegistrosAfectados INT = @@ROWCOUNT, @NumeroDeError2 INT = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ AFUERA, POR Q AL EJECUTARSE EL "if" SIGUIENTE, SE PIERDE EL VALOR
+
+				IF @id > 1 -- No registro en LogRegistros la 1era, q es la de Sistemas, por que todavía no Inserté la Tablas "Tablas" q es necesaria. La 2da es "Tablas" y ya va OK.
+					BEGIN
+						-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+						--EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+						--	,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+						--	,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+						-- EN ESTE CASO ESPECIALMENTE, UTILIZAMOS LA FCION SIGUIENTE POR EXCEPCION, por lo explicado más arriba en la definicion de los parametros  @RegistrosAfectados y @NumeroDeError2
+						
+						EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+							,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @RegistrosAfectados
+							,@NumeroDeError = @NumeroDeError2, @sResSQL = @sResSQL OUTPUT
+					END
+						
+				IF (@@ROWCOUNT > 0) AND (@SeCreanPaginas = 'True')
+					BEGIN -- Ingreso todas sus páginas asociadas
+						DECLARE @Fila INT = 1
+						DECLARE @NumeroDeFilas  INT 
+						-- Voy a ingresar una Página por cada FuncionDePagina Existente, que tenga seteado: GeneraPagina = '1'
+						SELECT @NumeroDeFilas = COUNT(0) FROM FuncionesDePaginas WHERE GeneraPagina = '1'
+						
+						DECLARE @FuncionDePaginaId INT = 1
+						
+						IF @NumeroDeFilas > 0 
+							WHILE @Fila <= @NumeroDeFilas
+								BEGIN
+									DECLARE @PaginaId INT -- No lo uso es solo para el EXEC
+									SELECT @FuncionDePaginaId = MIN(id) FROM FuncionesDePaginas 
+									WHERE (id > @FuncionDePaginaId) AND (GeneraPagina = '1') -- Tomo el id siguiente
+									
+									-- Inserto la página en cuestión
+									-- Ver explicación al inicion de creación del SP:
+										-- (CADA EXECUTE siguiente va generando 1 Página q incluye la tabla insertada, y la FuncionDePagina en cuestión
+										-- , y dentro de c/u llama (EXECUTE) al SP: "usp_RelAsig_RolesDeUsuarios_A_Paginas__InsertSegunPrioridadRoles" 
+										-- (Luego en el paso posterior, dentro del SP q se ejecuta a continuación: se va insertando TODOS los RolesDeusuarios con permisos a esa Página.
+									EXEC usp_Paginas__InsertSegunPrioridadRoles  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId
+										,@FechaDeEjecucion = @FechaDeEjecucion
+										,@TablaId = @id
+										,@FuncionDePaginaId = @FuncionDePaginaId
+										,@RolMenosPrioritarioQueCarga = @RolMenosPrioritarioQueCarga
+										,@RolMenosPrioritarioQueOpera = @RolMenosPrioritarioQueOpera
+										,@RolMenosPrioritarioQueVerRegAnulados = @RolMenosPrioritarioQueVerRegAnulados
+										,@RolMenosPrioritarioQueAccionesEspeciales = @RolMenosPrioritarioQueAccionesEspeciales
+										,@sResSQL = @sResSQL OUTPUT
+										,@id = @PaginaId OUTPUT
+										
+										--SELECT 'Página id = ' +  CAST(@PaginaId AS VARCHAR(MAX))
+									SET @Fila = @Fila + 1
+								END
+					END
+			END
+			
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+-- NO deberiamos permitir modificar tablas, tiene consecuencias en todo
+--IF (OBJECT_ID('usp_Tablas__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Tablas__Update_by_@id
+--GO
+-- SP-TABLA: Tablas /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Usuarios /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Usuarios__Insert') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Insert
+GO
+CREATE PROCEDURE usp_Usuarios__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+				
+		,@UserName							VARCHAR(40)	
+		,@Pass								VARCHAR(40)	
+		,@Nombre							VARCHAR(40)
+		,@Apellido							VARCHAR(40)
+		,@Email								VARCHAR(60)							
+		,@Email2							VARCHAR(60)							
+		,@Telefono							VARCHAR(40)							
+		,@Telefono2							VARCHAR(40)							
+		,@Direccion							VARCHAR(1000)						
+		,@Observaciones						VARCHAR(1000)
+		--,@ActorId							INT
+		,@RolDeUsuarioId					INT -- Con el que inicia
+		,@Activo							BIT = '1'
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el Insert se inserta el Contexto del Usuario, realizando la validación 1 implicitamente.
+	 
+		-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina) registros de esta tabla (@Tabla).
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+		IF @sResSQL = ''
+			BEGIN
+				SET NOCOUNT ON
+				
+				DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				DECLARE @UltimoLoginSesionId VARCHAR(24) = RAND()*100000000 -- 8 digitos
+								
+				INSERT INTO Usuarios
+				(
+					ContextoId
+					--,ActorId
+					,UserName
+					,Pass	
+					,Nombre
+					,Apellido
+					,Email	
+					,Email2
+					,Telefono
+					,Telefono2
+					,Direccion	
+					,Observaciones
+					,UltimoLoginSesionId
+					,Activo
+				)
+				VALUES
+				(
+					@ContextoId
+					--,@ActorId
+					,LOWER(@UserName) -- Para que no se repita con Mayúsculas
+					,@Pass	
+					,@Nombre
+					,@Apellido
+					,@Email	
+					,@Email2
+					,@Telefono
+					,@Telefono2
+					,@Direccion	
+					,@Observaciones
+					,@UltimoLoginSesionId
+					,@Activo
+				)
+
+				SET @id = SCOPE_IDENTITY()
+				
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+		
+		-- Ahora le asignamos el Rol de Usuario:	// OJO ACÁ, VOY A REEMPLAZAR EL VALOR DE @id, por eso lo guardo		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @Guardo_id INT = @id -- Guardo el @id del usuario
+				
+				-- INSERT INTO RelAsig_RolesDeUsuarios_A_Usuarios (RolDeUsuarioId, UsuarioId, FechaDesde ) VALUES (@RolDeUsuarioId, @id, @FechaDeEjecucion)
+				EXEC usp_RelAsig_RolesDeUsuarios_A_Usuarios__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Token = @Token
+					,@RolDeUsuarioId = @RolDeUsuarioId, @UsuarioId = @id, @FechaDesde = @FechaDeEjecucion
+					,@sResSQL = @sResSQL OUTPUT, @id = @id OUTPUT
+				
+				SET @id = @Guardo_id -- Se lo devuelvo, para que a la salilda, devolvemos el id del usuario.
+			END
+		
+		-- Tablas_A_Sincronizar_Con_Dispositivos :			
+		--IF @sResSQL = ''
+		--	BEGIN
+		--		----  sincronizar con dispositivos -------
+		--		update Tablas_A_Sincronizar_Con_Dispositivos 
+		--		set Sincronizar = '1'
+		--		from Tablas_A_Sincronizar_Con_Dispositivos 				  
+		--		where TablaId = 32
+		--		  --'Usuarios'
+		--		------ fin sincronizar con dispositivos-----
+		--	END
+		
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Usuarios__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Update_by_@id
+GO
+CREATE PROCEDURE usp_Usuarios__Update_by_@id
+		@id									INT	
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		--,@ActorId							INT
+		,@UserName							VARCHAR(40)	
+		--,@Pass								VARCHAR(40)	
+		,@Nombre							VARCHAR(40)
+		,@Apellido							VARCHAR(40)
+		,@Email								VARCHAR(60)							
+		,@Email2							VARCHAR(60)							
+		,@Telefono							VARCHAR(60)							
+		,@Telefono2							VARCHAR(60)							
+		,@Direccion							VARCHAR(1000)						
+		,@Observaciones						VARCHAR(1000)
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		--IF (SELECT ContextoId FROM Actores WHERE id = @ActorId) <> @ContextoId -- Valido que el Actor sea del mismo contexto
+		--	BEGIN
+		--		SET @sResSQL = 'La operación no puede realizarse. El Actor idicado no pertenece al mismo contexto.'
+		--	END
+			
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+			
+				UPDATE Usuarios
+				SET
+					--ActorId = @ActorId
+					UserName = LOWER(@UserName) -- Para que no se repita con Mayúsculas
+					,Nombre = @Nombre
+					,Apellido = @Apellido
+					,Email = @Email
+					,Email2 = @Email2
+					,Telefono = @Telefono
+					,Telefono2 = @Telefono2
+					,Direccion = @Direccion
+					,Observaciones = @Observaciones
+				FROM Usuarios
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+			
+		-- Tablas_A_Sincronizar_Con_Dispositivos :			
+		--IF @sResSQL = ''
+		--	BEGIN
+				------  sincronizar con dispositivos -------
+				--update Tablas_A_Sincronizar_Con_Dispositivos 
+				--set Sincronizar = '1'
+				--from Tablas_A_Sincronizar_Con_Dispositivos 				  
+				--where TablaId = 32
+			   --'Usuarios'
+				------ fin sincronizar con dispositivos-----
+		--	END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Usuarios__Update_Campos_Cambiar_Pass') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Update_Campos_Cambiar_Pass
+GO
+CREATE PROCEDURE usp_Usuarios__Update_Campos_Cambiar_Pass
+		@id								INT									
+		
+		,@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@PassActual					VARCHAR(40)	 						
+		,@PassNuevo						VARCHAR(40)	
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- acá es el propio usuario el q se lo cambia --> no valido nada
+		--EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		--IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+		--	BEGIN
+		--		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		--	END
+
+		-- Solo valido que sea él mismo el q ejecuta
+		IF NOT @id = @UsuarioQueEjecutaId
+			BEGIN
+				EXEC @sResSQL = [dbo].ufc_Respuesta__NoTienePermiso -- Solo puede actualizar la contraseña el propio usuario.
+			END
+		ELSE
+			BEGIN
+				IF (SELECT COUNT(*) FROM Usuarios WHERE (id = @id) AND (Pass = @PassActual)) = '1' 
+					BEGIN
+						--EXEC dbo.usp_VAL_UsuarioPerteneceAlContextoDe_@Usuario2_Id  @UsuarioId = @UsuarioQueEjecutaId, @Usuario2_Id = @id, @sResSQL = @sResSQL OUTPUT
+						
+						SET @sResSQL = '' 
+						UPDATE Usuarios
+						SET	Pass = @PassNuevo
+						FROM Usuarios
+						WHERE id = @id
+						
+						-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+						EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+							,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+							,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+					END
+				ELSE
+					BEGIN
+						SET @sResSQL = 'La contraseña ingresada no coincide con la anterior. No se puede realizar la actualización.'
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Usuarios__Update_Campos_Reset_Pass') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Update_Campos_Reset_Pass
+GO
+CREATE PROCEDURE usp_Usuarios__Update_Campos_Reset_Pass
+		@id									INT									
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''							
+
+		,@PassNuevo							VARCHAR(40)	
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF @sResSQL = '' -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Usuarios
+				SET	Pass = @PassNuevo
+				FROM Usuarios
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+---- SP-TABLA: Usuarios /ABMs/ - FIN
+
+
+
+
+-- ---------------------------------
+-- Script: 08b_Core__ABMs PrioritariosB_Contextos, Paginas, Tablas y Usuarios.sql - FIN
+-- =====================================================

@@ -1,0 +1,75 @@
+﻿@model ControladoresCore.ViewModels.CuentasDeEnviosVM
+@using ControladoresCore.Extensiones;
+
+@{
+    ViewBag.Title = "Informes - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+<div class="form-horizontal group-border">
+
+    @*@if (ViewBag.DatosDeUnaPagina.AutorizadoAVerRegAnulados == true)
+        {
+            <div class="row mt-3 mb-2">
+                <div style="width:109.66px" class="col-lg-2  control-label">Estado de registro</div>
+                <div class="col-lg-10 col-md-9 row" filtro="activo" type="radio">
+                    <div class="m-2 radio-custom custom-control-inline">
+                        <input type="radio" name="Radio-activo" value="true" checked="checked" id="Activos">
+                        <label for="Activos">Activos</label>
+                    </div>
+                    <div class="m-2 radio-custom custom-control-inline ">
+                        <input type="radio" name="Radio-activo" value="false" id="Anulados">
+                        <label for="Anulados">Anulados</label>
+                    </div>
+                    <div class="m-2 radio-custom custom-control-inline">
+                        <input type="radio" name="Radio-activo" value="null" id="Todos">
+                        <label for="Todos">Todos</label>
+                    </div>
+                </div>
+            </div>
+        }*@
+
+    <div class="row">
+        <div class="col-lg-8">
+            <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+            <div class="btn-group dropup mo-mb-2">
+                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                <div class="dropdown-menu">
+                    @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                    @*<a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>*@
+                    @*<div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Separated link</a>*@
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+
+                <th field="Nombre">
+                    @Html.DisplayNameFor(model => model.Nombre)
+                </th>
+
+                <th field="CuentaDeEmail">
+                    @Html.DisplayNameFor(model => model.CuentaDeEmail)
+                </th>
+
+                <th field="Observaciones">
+                    @Html.DisplayNameFor(model => model.Observaciones)
+                </th>
+
+
+                @HtmlHelperExtension.Boton("CuentasDeEnvios", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+            </tr>
+        </thead>
+    </table>
+}
+

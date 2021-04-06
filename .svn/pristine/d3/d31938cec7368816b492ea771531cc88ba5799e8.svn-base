@@ -1,0 +1,19 @@
+-- =====================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 01/06/2018 
+-- Description:	14-Core - Creando STORE PROCEDURES ESPECIALES - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- SP: STORE PROCEDURES ESPECIALES - Inicio
+-- -------------------------
+
+
+
+
+-- ---------------------------------
+-- SP: STORE PROCEDURES especiales - Fin de la creacion
+-- =====================================================

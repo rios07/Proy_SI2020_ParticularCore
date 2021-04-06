@@ -1,0 +1,316 @@
+-- =====================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 01/06/2018 
+-- Description:	Core__Validaciones - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- Core__Validaciones - Inicio
+-- -------------------------
+
+
+---------------------------------------------
+-- Las consignas con las Validaciones son:
+-- 1) SET @sResSQL = '' -- Si lo devuelve "vacío" es que tiene permiso, si no, lleva el mensaje de por qué no.
+---------------------------------------------
+
+
+
+
+-- VALIDACIONES de Usuario Valido para operar Anónimamente - INICIO
+IF (OBJECT_ID('usp_VAL_UsuarioAdminAnonimo') IS NOT NULL) DROP PROCEDURE usp_VAL_UsuarioAdminAnonimo
+GO
+CREATE PROCEDURE usp_VAL_UsuarioAdminAnonimo
+-- Es para los casos donde se necesita que opere alguien que no está logueado --> no tiene Usuario --> Que pase el @Contexto y le damos un Usuario Para operar en estos casos:
+	(
+			@UsuarioQueEjecutaId				INT
+			,@CodigoDelContexto					VARCHAR(100)
+			,@sResSQL							VARCHAR(1000)	OUTPUT
+	)
+	AS
+	BEGIN
+		SET @sResSQL = '' -- Si no le asignamos valor al inicio puede volver como NULL --> revienta al consultarla si = ''
+		
+		IF @UsuarioQueEjecutaId = 1 -- Para realizar esta consulta el @UsuarioQueEjecutaId debe ser el que no se puede operar.
+			BEGIN
+				SET @UsuarioQueEjecutaId = (SELECT U.id 
+												FROM Usuarios U
+													INNER JOIN Contextos CON ON U.ContextoId = CON.id
+												WHERE 
+													(U.EsUsuarioAdminAnonimo = '1')
+													AND (U.Activo = '1')
+													AND (CON.Codigo = @CodigoDelContexto)
+											)
+											
+				IF @UsuarioQueEjecutaId IS NULL
+					BEGIN
+						SET @sResSQL = 'La operación no puede continuar. No es un contexto válido, no hay un usuario admin anónimo para hacerlo o se encuentra inactivo para operar.'
+					END	
+			END
+		ELSE -- Es un usuario válido para operar, solo resta saber cual es su contexto.
+			BEGIN
+				IF @CodigoDelContexto IS NULL 
+					OR @CodigoDelContexto = ''
+					BEGIN 
+						SET @sResSQL = '' -- Va a operar con ese usurio (@UsuarioQueEjecutaId <> 1), está OK que continúe.
+					END
+				ELSE
+					BEGIN -- Introdujo un contexto --> Validaremos que pertenezca al usuario ingresado (@UsuarioQueEjecutaId <> 1)
+						SET @UsuarioQueEjecutaId = (SELECT U.id 
+												FROM Usuarios U
+													INNER JOIN Contextos CON ON U.ContextoId = CON.id
+												WHERE 
+													(U.id = @UsuarioQueEjecutaId) -- Se valida contra si mismo.
+													AND (U.Activo = '1')
+													AND (CON.Codigo = @CodigoDelContexto) -- Y perteneciendo al contexto ingresado.
+											)
+											
+						IF @UsuarioQueEjecutaId IS NULL
+							BEGIN
+								SET @sResSQL = 'La operación no puede continuar. El usuario no corresponde al Contexto indicado o se encuentra inactivo para operar.'
+							END	
+					END
+			END
+			
+		RETURN COALESCE(@UsuarioQueEjecutaId,  NULL, 0) -- No puede devolver nulo por que da error el SP.
+	END
+GO
+-- VALIDACIONES de Usuario Valido para operar Anónimamente - FIN
+
+
+
+
+-- VALIDACIONES de Pertenencia al Contexto - INICIO
+IF (OBJECT_ID('usp_VAL_UsuarioPerteneceAlContextoDelRegistro') IS NOT NULL) DROP PROCEDURE usp_VAL_UsuarioPerteneceAlContextoDelRegistro
+GO
+CREATE PROCEDURE usp_VAL_UsuarioPerteneceAlContextoDelRegistro
+		@UsuarioId		INT
+		,@Tabla			VARCHAR(80)
+		,@RegistroId	INT
+		,@sResSQL		VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN
+		SET @sResSQL = '' -- Si no le asignamos valor al inicio puede volver como NULL --> revienta al consultarla si = ''
+		
+		 -- Si la tabla NO tiene ContextoId, o el Usuario Pertenece a la tabla (@Tabla) --> devuelve ''
+		
+		IF (COL_LENGTH(@Tabla, 'ContextoId') IS NULL -- la tabla (@Tabla) NO tiene "ContextoId" --> no tiene sentido preguntar si corresponde al contexto. Responde positivamente de todas formas.
+				OR @RegistroId IS NULL -- No tengo realmente un registro para constatar el Contexto --> no tiene sentido preguntar si corresponde al contexto. Responde positivamente de todas formas.
+				OR @RegistroId = 0 -- Hay veces que desde .NET se pasa un 0 como equivalencia de NULO.
+				OR @Tabla = 'Importaciones' -- Excluimos esta tabla de mirar permisos.
+			)
+			BEGIN
+				SET @sResSQL = '' 
+			END
+		ELSE
+			BEGIN
+				DECLARE @ContextoDelUsuarioId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioId)
+				
+				DECLARE @ContextoDelRegistroId INT
+				
+				SET NOCOUNT ON
+				DECLARE @sSQL NVARCHAR(100) --Es necesario NVARCHAR
+				DECLARE @Parametros NVARCHAR(500) --Es necesario NVARCHAR
+				SET @Parametros = N'@RegistroId INT, @ContextoDelRegistroId INT OUTPUT'
+
+				SELECT @sSQL = N'SELECT @ContextoDelRegistroId = ContextoId FROM ' + QUOTENAME(@Tabla) + ' WHERE id = @RegistroId'
+				EXEC  sp_executesql @sSQL, @Parametros, @ContextoDelRegistroId = @ContextoDelRegistroId OUTPUT, @RegistroId = @RegistroId
+
+				--SELECT '@ContextoDelRegistroId = ' + Cast(@ContextoDelRegistroId as varchar)
+				
+				IF @ContextoDelRegistroId IS NULL
+					BEGIN
+						SET @sResSQL = 'No es un registro válido. La acción no puede continuar.' -- No es un registro válido
+					END
+				ELSE
+					BEGIN
+						IF (@ContextoDelUsuarioId = @ContextoDelRegistroId)
+							BEGIN
+								SET @sResSQL = '' -- La tabla (@Tabla) tiene Contexto, y el Registro de esa tabla con id = @RegistroId tiene el mismo contexto que el Usuario de id = @UsuarioId
+							END
+						ELSE -- El Registro es válido, pertenece a una tabla con ContextoId = @ContextoDelRegistroId, pero es <> del @ContextoDelUsuarioId
+							BEGIN
+								EXEC @sResSQL = dbo.[ufc_Respuesta__UsuarioNoPerteneceAlContexto]
+							END
+					END
+			END
+	END
+GO
+-- VALIDACIONES de Pertenencia al Contexto - FIN
+
+
+
+
+-- VALIDACIONES UsuarioTieneRol - INICIO
+IF (OBJECT_ID('usp_VAL_UsuarioTieneRol') IS NOT NULL) DROP PROCEDURE usp_VAL_UsuarioTieneRol
+GO
+CREATE PROCEDURE usp_VAL_UsuarioTieneRol
+		@UsuarioId			INT
+		,@FechaDeEjecucion	DATETIME
+		,@Rol				VARCHAR(30)
+		,@sResSQL			VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN
+		SET @sResSQL = '' -- Si no le asignamos valor al inicio puede volver como NULL --> revienta al consultarla si = ''
+		
+		IF NOT EXISTS
+			(
+				SELECT RARU.id FROM RelAsig_RolesDeUsuarios_A_Usuarios RARU
+					INNER JOIN Usuarios U ON RARU.UsuarioId = U.id
+					INNER JOIN RolesDeUsuarios RDU ON RARU.RolDeUsuarioId = RDU.id
+				WHERE RARU.UsuarioId = @UsuarioId
+					AND U.Activo = '1'
+					AND RDU.Nombre = @Rol
+					AND RARU.FechaDesde <= @FechaDeEjecucion
+					AND	(RARU.FechaHasta IS NULL OR RARU.FechaHasta >= @FechaDeEjecucion)
+			)
+			BEGIN
+				EXEC @sResSQL = [dbo].[ufc_Respuesta__NoTieneElRol]
+			END
+	END
+GO
+-- VALIDACIONES UsuarioTieneRol - FIN
+
+
+
+
+-- VALIDACIONES AutorizadoA (FUNCION MAESTRA) - INICIO
+IF (OBJECT_ID('usp_VAL_AutorizadoA') IS NOT NULL) DROP PROCEDURE usp_VAL_AutorizadoA
+GO
+-- Si necesita controlar si el Registro está Anulado y tiene permiso de verlo, tiene q utilizar: usp_VAL_AutorizadoA_ConReg
+CREATE PROCEDURE usp_VAL_AutorizadoA
+		@UsuarioId			INT
+		,@FechaDeEjecucion	DATETIME
+		,@Tabla				VARCHAR(80)
+		,@FuncionDePagina   VARCHAR(30)
+		,@AutorizadoA		VARCHAR(30)
+		,@sResSQL			VARCHAR(1000)	OUTPUT -- Si lo devuelve "vacío" es que tiene permiso, si no, lleva el mensaje de por qué no.
+		--,@RegistroId		INT = 0 -- OPCIONAL PARA CASOS PARTICULARES, como @FuncionDePagina = "Registro"
+	AS
+	BEGIN
+		SET @sResSQL = '' -- Si no le asignamos valor al inicio puede volver como NULL --> revienta al consultarla si = ''
+		
+		DECLARE @TienePermiso BIT = 0
+		
+		EXEC usp_VAL_UsuarioTieneRol  @UsuarioId = @UsuarioId
+					,@FechaDeEjecucion = @FechaDeEjecucion
+					,@Rol = 'Master Admin'
+					,@sResSQL = @sResSQL OUTPUT
+					
+		IF (@sResSQL = '') --> Tiene el rol --> No valido nada más, tiene permiso a TODO.
+			OR @Tabla = 'Importaciones' -- Excluimos esta tabla de mirar permisos.
+			BEGIN
+				SET @TienePermiso = 1
+			END			
+		ELSE
+			BEGIN
+				SET NOCOUNT ON
+				DECLARE @FuncionDePaginaId INT = (SELECT id FROM FuncionesDePaginas WHERE Nombre = @FuncionDePagina)
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				DECLARE @PaginaId INT = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+				DECLARE @VerRegAnulados BIT = 0
+
+				SELECT @TienePermiso = 
+					CASE
+						WHEN @AutorizadoA = 'CargarLaPagina' THEN MAX(CAST(RPRP.AutorizadoA_CargarLaPagina AS INT))
+						WHEN @AutorizadoA = 'OperarLaPagina' THEN MAX(CAST(RPRP.AutorizadoA_OperarLaPagina AS INT))
+						WHEN @AutorizadoA = 'VerRegAnulados' THEN MAX(CAST(RPRP.AutorizadoA_VerRegAnulados AS INT))
+						WHEN @AutorizadoA = 'AccionesEspeciales' THEN MAX(CAST(RPRP.AutorizadoA_AccionesEspeciales AS INT))
+					END
+					--,@VerRegAnulados = RPRP.AutorizadoA_VerRegAnulados -- LO GUARDO PARA CONTROLAR MAS TARDE
+
+				FROM RelAsig_RolesDeUsuarios_A_Usuarios RARU
+					INNER JOIN RelAsig_RolesDeUsuarios_A_Paginas RPRP ON RARU.RolDeUsuarioId = RPRP.RolDeUsuarioId
+					INNER JOIN Usuarios U ON RARU.UsuarioId = U.id
+				WHERE RARU.UsuarioId = @UsuarioId 
+					AND U.Activo = '1'
+					AND RPRP.PaginaId = @PaginaId
+					AND RARU.FechaDesde <= @FechaDeEjecucion
+					AND	(RARU.FechaHasta IS NULL OR RARU.FechaHasta >= @FechaDeEjecucion)
+			END
+			
+		IF @TienePermiso = 0
+			BEGIN
+				EXEC @sResSQL = ufc_Respuesta__NoTienePermiso
+			END
+		ELSE
+			BEGIN
+				SET @sResSQL = ''
+			END
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('usp_VAL_AutorizadoA_ConReg') IS NOT NULL) DROP PROCEDURE usp_VAL_AutorizadoA_ConReg
+GO
+CREATE PROCEDURE usp_VAL_AutorizadoA_ConReg
+		@UsuarioId			INT
+		,@FechaDeEjecucion	DATETIME
+		,@Tabla				VARCHAR(80)
+		,@FuncionDePagina   VARCHAR(30)
+		,@AutorizadoA		VARCHAR(30)
+		,@sResSQL			VARCHAR(1000)	OUTPUT -- Si lo devuelve "vacío" es que tiene permiso, si no, lleva el mensaje de por qué no.
+		
+		,@RegistroId		INT
+	AS
+	BEGIN
+		SET @sResSQL = '' -- Si no le asignamos valor al inicio puede volver como NULL --> revienta al consultarla si = ''
+		
+		-- 1ero llamo al generico sin RegistroId
+		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+
+		IF (@sResSQL = '') --> Tiene permiso, solo resta mirar respecto al registro en cuestión.
+			BEGIN
+				SET NOCOUNT ON
+				
+				DECLARE @FuncionDePaginaId INT = (SELECT id FROM FuncionesDePaginas WHERE Nombre = @FuncionDePagina)
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				DECLARE @PaginaId INT = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+				DECLARE @VerRegAnulados BIT = 0
+				
+				SELECT @VerRegAnulados = RPRP.AutorizadoA_VerRegAnulados -- LO GUARDO PARA CONTROLAR MAS TARDE
+				FROM RelAsig_RolesDeUsuarios_A_Usuarios RARU
+					INNER JOIN RelAsig_RolesDeUsuarios_A_Paginas RPRP ON RARU.RolDeUsuarioId = RPRP.RolDeUsuarioId
+					INNER JOIN Usuarios U ON RARU.UsuarioId = U.id
+				WHERE RARU.UsuarioId = @UsuarioId 
+					AND U.Activo = '1'
+					AND RPRP.PaginaId = @PaginaId
+					AND RARU.FechaDesde <= @FechaDeEjecucion
+					AND	(RARU.FechaHasta IS NULL OR RARU.FechaHasta >= @FechaDeEjecucion)
+				
+				-- Si tiene permiso, y estoy cargando una página 'Registro', me fijo si es un Registro Anulado:
+				IF (@AutorizadoA = 'CargarLaPagina' AND @FuncionDePagina = 'Registro')
+					BEGIN
+						DECLARE @LlevaActivo BIT = (SELECT LlevaActivo FROM Tablas WHERE Nombre = @Tabla)
+						
+						IF (@LlevaActivo = 1) --> Controlo si puede verlo
+							BEGIN
+								DECLARE @Activo BIT
+								DECLARE @sSQL NVARCHAR(100)
+								DECLARE @Parametros NVARCHAR(500)
+								SET @Parametros = N'@RegistroId INT, @Activo BIT OUTPUT';
+
+								SELECT @sSQL = N'SELECT @Activo = Activo FROM ' + QUOTENAME(@Tabla) + ' WHERE id = @RegistroId'
+								EXEC  sp_executesql @sSQL, @Parametros, @Activo = @Activo OUTPUT, @RegistroId = @RegistroId
+								
+								IF (@Activo = 0 AND @VerRegAnulados = 0) --> El registro está anulado, y el usuario NO tiene permiso de ver anulados.
+									BEGIN
+										SET @sResSQL = 'No se puede concretar la acción. El registro se encuentra anulado, y ud. no dispone de permisos para ver registros anulados.'
+									END
+							END
+					END
+			END
+	END
+GO
+
+
+
+
+-- ---------------------------------
+-- Core__Validaciones - FIN
+-- =====================================================

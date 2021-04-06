@@ -1,0 +1,72 @@
+﻿@model ControladoresCore.ViewModels.LogLoginsVM
+@using ControladoresCore.Extensiones;
+
+@{
+    ViewBag.Title = "LogErrores - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+<div class="form-horizontal group-border">
+    <div class="form-group ">
+        <
+            </div>
+    <div class="row">
+        <div class="col-lg-8">
+            <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+            <div class="btn-group dropup mo-mb-2">
+                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                <div class="dropdown-menu">
+                    @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                    @*<a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>*@
+                    @*<div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Separated link</a>*@
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" style="table-layout:fixed" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+                <th field="Id"style="width: 5%">
+                    @Html.DisplayNameFor(model => model.Id)
+                </th>
+
+                <th field="FechaDeEjecucionParaListado">
+                    @Html.DisplayNameFor(model => model.FechaDeEjecucion)
+                </th>
+
+                <th field="Pagina">
+                    @Html.DisplayNameFor(model => model.UsuarioIngresado)
+                </th>
+
+                <th field="Tabla">
+                    @Html.DisplayNameFor(model => model.TipoDeLogin)
+                </th>
+
+                <th field="Mensaje" >
+                    @Html.DisplayNameFor(model => model.DispositivoId)
+                </th>
+
+                
+
+                @HtmlHelperExtension.Boton("LogErrores", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+            </tr>
+        </thead>
+    </table>
+}
+
+<style>
+    td {
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

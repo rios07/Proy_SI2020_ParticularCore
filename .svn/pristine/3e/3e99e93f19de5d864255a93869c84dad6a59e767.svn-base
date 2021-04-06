@@ -1,0 +1,69 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/AutoDetectedNamingRules/=Parameters/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="p" Suffix="" Style="AaBb" /&gt;</s:String>
+	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/AutoDetectedNamingRules/=Method/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="" Suffix="" Style="AaBb" /&gt;</s:String>
+	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/AutoDetectedNamingRules/=PrivateInstanceFields/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="_" Suffix="" Style="aaBb"&gt;&lt;ExtraRule Prefix="_" Suffix="" Style="AaBb" /&gt;&lt;/Policy&gt;</s:String>
+	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/AutoDetectedNamingRules/=Property/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="" Suffix="" Style="AaBb" /&gt;</s:String>
+	<s:Int64 x:Key="/Default/CodeStyle/Naming/CSharpAutoNaming/AutoNamingCompletedVersion/@EntryValue">2</s:Int64>
+	<s:String x:Key="/Default/Environment/AssemblyExplorer/XmlDocument/@EntryValue">&lt;AssemblyExplorer&gt;&#xD;
+  &lt;Assembly Path="F:\Repo\CoreV2\trunk\Core\ControladoresCore\bin\Debug\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="F:\Repo\CoreIs40\trunk\Core\ControladoresCore\bin\Debug\Autofac.Integration.WebApi.dll" /&gt;&#xD;
+  &lt;Assembly Path="F:\Repo\Particular-Core\Repositorio_SI2019_ParticularCore\trunk\packages\Autofac.Mvc5.4.0.2\lib\net45\Autofac.Integration.Mvc.dll" /&gt;&#xD;
+  &lt;Assembly Path="F:\Repo\Particular-Core\Repositorio_SI2019_ParticularCore\trunk\ProyectoParticular\Bin\Autofac.Integration.WebApi.dll" /&gt;&#xD;
+  &lt;Assembly Path="F:\Repo\CoreIs40\trunk\Core\ControladoresCore\bin\Debug\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="E:\Repo\CoreIs40\trunk\Core\ControladoresCore\bin\Debug\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="E:\Repo\Particular-Core\Repositorio_SI2019_ParticularCore\trunk\ProyectoParticular\Bin\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="E:\Repo\SI20_pCore\trunk\ProyectoParticular\bin\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="E:\Repo\SI20_pCore\trunk\packages\Antlr.3.4.1.9004\lib\Antlr3.Runtime.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\_DatosDelSistema.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Autofac.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Autofac.Integration.Mvc.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Autofac.Integration.WebApi.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\AutoMapper.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\ClosedXML.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\ControladoresCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Dapper.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\DocumentFormat.OpenXml.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\ExcelNumberFormat.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\FastMember.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\FuncionesCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\IronPdf.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Microsoft.IdentityModel.JsonWebTokens.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Microsoft.IdentityModel.Logging.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Microsoft.IdentityModel.Tokens.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Microsoft.Web.Infrastructure.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\ModelosCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\Newtonsoft.Json.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\QRCoder.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\RepositoriosCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\ServiciosCore.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Drawing.Common.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.IdentityModel.Tokens.Jwt.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Net.Http.Formatting.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.Helpers.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.Http.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.Http.WebHost.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.Mvc.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.Razor.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.WebPages.Deployment.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.WebPages.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_BaseCore\trunk\ControladoresCore\bin\Debug\System.Web.WebPages.Razor.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_PCore\trunk\ProyectoParticular\Bin\Microsoft.AI.Agent.Intercept.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\SI20_PCore\trunk\packages\Microsoft.ApplicationInsights.2.4.0\lib\net46\Microsoft.ApplicationInsights.dll" /&gt;&#xD;
+  &lt;Assembly Path="G:\repositorio\Proy_SI2020_ParticularCore__\trunk\packages\Microsoft.ApplicationInsights.2.2.0\lib\net46\Microsoft.ApplicationInsights.dll" /&gt;&#xD;
+&lt;/AssemblyExplorer&gt;</s:String>
+	<s:Boolean x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark1/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark1/Coords/@EntryValue">(Doc Ln 200 Col 49)</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark1/FileId/@EntryValue">58771A8C-E1FE-4519-8690-920E0FE9865F/d:Views/d:Shared/f:_LayoutCore.cshtml</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark1/Owner/@EntryValue">NumberedBookmarkManager</s:String>
+	<s:Boolean x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark2/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark2/Coords/@EntryValue">(Doc Ln 315 Col 8)</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark2/FileId/@EntryValue">58771A8C-E1FE-4519-8690-920E0FE9865F/d:Views/d:Shared/f:_LayoutCore.cshtml</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark2/Owner/@EntryValue">NumberedBookmarkManager</s:String>
+	<s:Boolean x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark3/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark3/Coords/@EntryValue">(Doc Ln 20 Col 15)</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark3/FileId/@EntryValue">58771A8C-E1FE-4519-8690-920E0FE9865F/d:Views/d:RelAsig_RolesDeUsuarios_A_Usuarios/f:Listado.cshtml</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark3/Owner/@EntryValue">NumberedBookmarkManager</s:String>
+	<s:Boolean x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark4/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark4/Coords/@EntryValue">(Doc Ln 42 Col 16)</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark4/FileId/@EntryValue">58771A8C-E1FE-4519-8690-920E0FE9865F/d:Views/d:Usuarios/f:Listado.cshtml</s:String>
+	<s:String x:Key="/Default/Housekeeping/Bookmarks/NumberedBookmarks/=Bookmark4/Owner/@EntryValue">NumberedBookmarkManager</s:String></wpf:ResourceDictionary>

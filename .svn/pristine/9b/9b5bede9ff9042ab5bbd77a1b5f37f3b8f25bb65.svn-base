@@ -1,0 +1,62 @@
+---- =====================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 01/06/2018 
+-- Description:	Constantes
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- Constantes - INICIO
+-- -------------------------
+
+
+
+
+IF (OBJECT_ID('ufc_Respuesta__NoTieneElRol') IS NOT NULL) DROP FUNCTION ufc_Respuesta__NoTieneElRol
+GO
+CREATE FUNCTION ufc_Respuesta__NoTieneElRol
+		()
+	RETURNS VARCHAR(1000)
+	AS
+	BEGIN
+		RETURN 'No tiene el Rol consultado.'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_Respuesta__NoTienePermiso') IS NOT NULL) DROP FUNCTION ufc_Respuesta__NoTienePermiso
+GO
+CREATE FUNCTION ufc_Respuesta__NoTienePermiso
+		()
+	RETURNS VARCHAR(1000)
+	AS
+	BEGIN
+		RETURN 'No tiene permiso para realizar esta acción. Disculpe las molestias.'
+	END
+GO
+
+
+
+
+
+IF (OBJECT_ID('ufc_Respuesta__UsuarioNoPerteneceAlContexto') IS NOT NULL) DROP FUNCTION ufc_Respuesta__UsuarioNoPerteneceAlContexto
+GO
+CREATE FUNCTION ufc_Respuesta__UsuarioNoPerteneceAlContexto
+		()
+	RETURNS VARCHAR(1000)
+	AS
+	BEGIN
+		RETURN 'No se puede realizar la acción. El Usuario no pertenece al contexto en cuestión.'
+	END
+GO
+
+
+
+
+-- ---------------------------------
+-- Constantes - FIN
+-- =====================================================

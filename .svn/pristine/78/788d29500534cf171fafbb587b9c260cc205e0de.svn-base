@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html>
+<div class="media border-bottom archivo" id="archivo_[Id]" value="[Id]">
+    <input type="hidden" id="idArchivo" value=[Id]> 
+    <div class="media-left">
+        <img src="/[srcIcono]" class="media-object" style="width:60px">
+    </div>
+    <div class="media-body datos" id="ArchivosDatos_[Id]">
+        <h4 class="media-heading nombre">[NombreAMostrar]</h4>
+        <p class="obs">[Observaciones]</p>
+    </div>
+    <div class="media-right archivo-botones" id="ArchivosBotones_[Id]" style="vertical-align:middle">
+        <a href="/[Ruta]" class="btn btn-primary align-middle boton-archivo" id="BotonArchivo" role="button" download>Descargar</a>
+    </div>
+</div>
+<hr/>

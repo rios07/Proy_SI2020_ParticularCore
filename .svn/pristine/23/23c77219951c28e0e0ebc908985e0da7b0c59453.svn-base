@@ -1,0 +1,98 @@
+﻿@model ControladoresCore.ViewModels.LogRegistrosVM
+@using ControladoresCore.Extensiones;
+
+@{
+    ViewBag.Title = "Registro de actividades - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border">
+        <div class="form-group ">
+            <label class="col-lg-1 control-label">
+                Desde
+            </label>
+            <div class="col-lg-3">
+                <div class="input-group" style="max-width:350px">
+                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                    <input class="form-control text-box single-line" filtro="FechaDesde" id="FechaDesde" name="FechaDesde" type="date" value="2017-01-01">
+                </div>
+            </div>
+            <label class="col-lg-1 control-label">
+                Hasta
+            </label>
+            <div class="col-lg-3">
+                <div class="input-group" style="max-width:350px">
+                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                    <input class="form-control text-box single-line" filtro="FechaHasta" id="FechaHasta" name="FechaHasta" type="date" value="2020-01-01">
+                </div>
+            </div>
+
+            <label class="col-lg-1 control-label">
+                Usuario
+            </label>
+            <div class="col-lg-3">
+                @Html.DropDownListFor(m => m.UsuarioId, new SelectList(Model.Usuarios, "Id", "Nombre", Model.UsuarioId
+               ), "- Todas -", new { filtro = "UsuarioId", @class = "form-control" })
+            </div>
+        </div>
+        <div class="form-group ">
+            <label class="col-lg-1 control-label">
+                Tabla
+            </label>
+            <div class="col-lg-3">
+                @Html.DropDownListFor(m => m.TablaId, new SelectList(Model.Tablas, "Id", "Nombre", Model.TablaId
+               ), "- Todas -", new { filtro = "TablaId", @class = "form-control" })
+            </div>
+            <label class="col-lg-1 control-label">
+                Tipo de operacion
+            </label>
+            <div class="col-lg-3">
+                @Html.DropDownListFor(m => m.TipoDeOperacionId, new SelectList(Model.TiposDeOperaciones, "Id", "Nombre", Model.TipoDeOperacionId
+               ), "- Todas -", new { filtro = "TipoDeOperacionId", @class = "form-control" })
+            </div>
+
+        </div>
+        <div class="form-group m5">
+            <div class="col-lg-4">
+                <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                @Html.ActionLink("Exportar", "Exportar", null, new { @class = "btn btn-default" })
+            </div>
+        </div>
+
+    </div>
+}
+
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+
+
+                <th field="FechaDeEjecucion">
+                    @Html.DisplayNameFor(model => model.FechaDeEjecucion)
+                </th>
+
+                <th field="Usuario">
+                    @Html.DisplayNameFor(model => model.Usuario)
+                </th>
+
+                <th field="Tabla">
+                    @Html.DisplayNameFor(model => model.Tabla)
+                </th>
+
+                <th field="RegistroId">
+                    @Html.DisplayNameFor(model => model.RegistroId)
+                </th>
+
+                <th field="TipoDeOperacion">
+                    @Html.DisplayNameFor(model => model.TipoDeOperacion)
+                </th>
+
+                @HtmlHelperExtension.Boton("LogRegistros", "Listado", 0, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina)
+            </tr>
+        </thead>
+    </table>
+}
+

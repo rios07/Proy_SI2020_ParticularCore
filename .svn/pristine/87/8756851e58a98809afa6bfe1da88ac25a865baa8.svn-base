@@ -1,0 +1,138 @@
+﻿@model ControladoresCore.ViewModels.RelAsig_TiposDeContactos_A_ContextosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Usuarios - Listado";
+}
+<style>
+    tr img {
+        width: 40px;
+        height: 40px;
+    }
+</style>
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border">
+
+
+        <div class="row">
+            <div class="col-lg-8">
+                <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                @Html.ActionLink("Exportar", "Exportar", null, new { @class = "btn btn-default" }).DisableIf(() => ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina == true)
+                <a class="btn btn-danger removeOnIframe" href="/administracion/Home/Index">Regresar</a>
+            </div>
+        </div>
+    </div>
+}
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+                <th field="Nombre">
+                    Tipo De Contacto
+                </th>
+
+                <th field="Asignado" mask="<img style='width: 20px; height:20px;display:block;margin:auto;' src='/template/img/checkbox_{VAL}.svg'>">
+                    Asignado al contexto
+                </th>
+
+
+
+
+                <th field="Id" style="width:15%" mask="<a class='btn btn-primary' type='button' style='color:white;display:block;margin:auto;' onClick='AsignarDesasignarContexto({VAL},$(this));' style='cursor:pointer;'>Asignar/Des-asignar</a>">Asignar/Des-asignar</th>
+
+
+            </tr>
+        </thead>
+    </table>
+}
+
+
+<script>
+    function CambiarEstado(img) {
+        
+        var src = $(img).attr("src");
+        var estadoActual = (src.indexOf("True") > 0);
+        if (estadoActual) {
+            var nuevoSrc = src.replace("True", "False");
+            img.attr("value", "false");
+        }
+        else {
+            var nuevoSrc = src.replace("False", "True");
+            img.attr("value", "true");
+        }
+
+        $(img).attr("src", nuevoSrc);
+    };
+
+    function AsignarDesasignarContexto(id,td) {
+        
+        var datos = {
+            pTipoDeContactoId: id
+        }
+
+        $.ajax({
+            url: '@Url.Action("SwapAsignacion")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function (retorno) {
+                NotifNoIntrusive("Actualización exitosa!", "Enhorabuena!", 2000, "mdi mdi-check", "success");
+                img = td.parent().parent().children().eq(1).children();
+                CambiarEstado(img);
+            }
+        });
+    };
+
+@*function GuardarCambios(child) {
+        var cargarPagina = child.parent().parent().children(":eq(2)").children().attr("value");
+        var operarPagina = child.parent().parent().children(":eq(3)").children().attr("value");
+        var verAnulados = child.parent().parent().children(":eq(4)").children().attr("value");
+        var accionesEspeciales = child.parent().parent().children(":eq(5)").children().attr("value");
+        var id = child.attr('value');
+
+
+        var datos = {
+            AutorizadoA_CargarLaPagina: cargarPagina,
+            AutorizadoA_OperarLaPagina: operarPagina,
+            AutorizadoA_VerRegAnulados: verAnulados,
+            AutorizadoA_AccionesEspeciales: accionesEspeciales,
+            Id: id
+        };
+        $.ajax({
+            //url: '@Url.Action("UpdateEnListado")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function (retorno) {
+                NotificacionSwal(retorno.Resultado);
+            }
+        });
+        QuitarCambio(child);
+        child.attr('onClick', 'AgregarCambio($(this));')
+        child.html('Actualizar');
+    };*@
+
+    function ObtenerEstado(obj) {
+        src = obj.children().attr('src');
+        return (src.indexOf("True") > 0);
+    };
+
+    function NotificacionSwal(estado) {
+        if (estado) {
+            NotifNoIntrusive("Los permisos se actualizaron con exito.", "Enhorabuena!", "","mdi mdi-check", "success");
+        }
+        else {
+            NotifNoIntrusive("Ha ocurrido un error.", "Oops!", "","mdi mdi-close-octagon", "error");
+        };
+    };
+
+</script>
+<script src="~/template/plugins/ui/bootstrap-sweetalert/sweet-alert.js"></script>
+<style>
+    .updating {
+        cursor: pointer;
+    }
+</style>

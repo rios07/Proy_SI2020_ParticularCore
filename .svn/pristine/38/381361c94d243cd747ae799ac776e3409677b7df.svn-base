@@ -1,0 +1,194 @@
+﻿@model ControladoresCore.ViewModels.TareasVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Tareas - Registro";
+}
+<div class="row">
+    <div class="col-md-10">
+
+    </div>
+</div>
+@using (Html.BeginCard("Tarea seleccionada"))
+{
+    using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @if (Model.TablaDeReferencia != "SinTabla")
+            {
+                <div class="alert alert-info">
+                    @Model.RegistroDeReferencia<a href="~/@Model.TablaDeReferencia/Registro/@Model.RegistroId">Abrir</a>
+                </div>
+                <hr />
+
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    @Model.RegistroDeReferencia
+                </div>
+                <hr />
+            }
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            @Html.HiddenFor(model => model.Id)
+            <div class="row">
+
+                <div class=" col-sm-12">
+                    <h5 class="pull-right text-muted " style="
+                                      padding-top: -20px;
+                                      border-top-width: -20px;
+                                      margin-top: -10px;
+                                      padding-top: 0px;">
+                        Registro Activo: @if (Model.Activo)
+                                         {<i class="mdi mdi-check-circle-outline" style="color:darkseagreen"></i>}
+                                         else
+                                         {<i class="mdi mdi-close-circle-outline" style="color:indianred"></i>}
+                    </h5>
+                </div>
+            </div>
+            <div class="row">
+                <div id="divCampos" class="col-sm-12 ">
+                    <div class="form-group ">
+                        @Html.LabelFor(model => model.FechaDeInicio, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            <div class="input-group" >
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                @Html.EditorFor(model => model.FechaDeInicio, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                                @Html.ValidationMessageFor(model => model.FechaDeInicio, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group ">
+                        @Html.LabelFor(model => model.FechaLimite, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            <div class="input-group" >
+                                <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                @Html.EditorFor(model => model.FechaLimite, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                                @Html.ValidationMessageFor(model => model.FechaLimite, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.EstadoDeTarea, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.EstadoDeTarea, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.EstadoDeTarea, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.Titulo, htmlAttributes: new { @class = "control-label col-md-3 " })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.Titulo, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.Titulo, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.UsuarioOriginante, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.UsuarioOriginante, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.UsuarioOriginante, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.UsuarioDestinatario, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.UsuarioDestinatario, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.UsuarioDestinatario, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.TipoDeTarea, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.TipoDeTarea, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.TipoDeTarea, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.ImportanciaDeTarea, htmlAttributes: new { @class = "control-label col-md-3" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.ImportanciaDeTarea, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.ImportanciaDeTarea, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        @Html.LabelFor(model => model.Observaciones, htmlAttributes: new { @class = "control-label col-md-2" })
+                        <div class="col-md-9">
+                            @Html.EditorFor(model => model.Observaciones, new { htmlAttributes = new { @class = "form-control  ", disabled = "disabled", @readonly = "readonly" } })
+                            @Html.ValidationMessageFor(model => model.Observaciones, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+        </div>
+    }
+
+}
+
+@using (Html.BeginCard("Adjuntos"))
+{
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#archivos" id="TabArchivos" role="tab" aria-expanded="false">Archivos</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link " data-toggle="tab" href="#imagenes" role="tab" aria-expanded="true">Visualizador de archivos</a>
+        </li>
+ 
+        
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane p-3 active" id="profile" role="tabpanel" aria-expanded="false">
+            @{Html.RenderPartial("_ArchivosMostrar");}
+        </div>
+        <div class="tab-pane p-3 " id="imagenes" role="tabpanel" aria-expanded="true">
+            @{Html.RenderPartial("_CarouselImagenes");}
+        </div>
+
+        
+    </div>
+   
+}
+<div class="card" id="dyn_2">
+    <h4 style="padding:1px; background-color:var(--color-primary)" class="card-header mt-0"></h4>
+    <div class="card-body fade-in p-2">
+        <div class="col-lg-12 pull-left botonera">
+            @HtmlHelperExtension.Boton("Tareas", "Listado", ViewBag.Seccion)
+
+            @HtmlHelperExtension.Boton("Tareas", "Update", Model.Id, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.DatosDeUnaPagina.AutorizadoAAccionesEspeciales, @Model.Activo, @ViewBag.Seccion)
+
+            @HtmlHelperExtension.Boton("Tareas", "Delete", Model.Id, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.DatosDeUnaPagina.AutorizadoAAccionesEspeciales, Model.Activo, ViewBag.Seccion)
+            <a class="btn btn-danger removeOnIframe" href="/intranet/Home/Index">Cancelar</a>
+        </div>
+    </div>
+</div>
+
+<div id="accordion">
+    <div class="card">
+        <div class="card-header p-0" style="background-color: #adadad;border-color:grey;color:white;" id="headingOne" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+            <h5 class="mb-0">
+                <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Historia del Registro
+                </button>
+            </h5>
+        </div>
+
+        <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+            <div class="card-body">
+                @Html.Raw(Model.Historia)
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,120 @@
+﻿@using FuncionesCore;
+<div id="page-header" class="clearfix">
+    <div class="row">
+        @if (ViewBag.DatosDeUnaPagina != null)
+        {
+            <h2 class="Color-Titulo col-md-10">@ViewBag.DatosDeUnaPagina.Titulo</h2>
+        }
+        else
+        {
+            <div>Titulo Taltante Informe a Sistemas</div>
+        }
+
+
+        <div class="header-stats col-md-2">
+            <div class="spark clearfix">
+                <div class="dropdown">
+                    <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown">
+                        <i class="fa fa-comment-o"></i> Lea la ayuda
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu" style="width:220px">
+                        <div class="panel panel-default">
+                            <!-- Start .panel -->
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Ayuda</h4>
+                            </div>
+                            <div class="panel-body">
+                                <div class="scroll" data-height="100">
+                                    @if (ViewBag.DatosDeUnaPagina != null)
+                                    {
+                                        @ViewBag.DatosDeUnaPagina.Tips
+                                    }
+                                    else
+                                    {
+                                        <div>Tips Taltantes Informe a Sistemas</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <span class="txt"></span>
+            </div>
+        </div>
+    </div>
+    <script>
+        function Permiso() {
+            document.getElementById("Permiso").innerHTML = "Usted no tiene permisos para realizar esa accion";
+            document.getElementById("Permiso").className = "alert alert-danger";
+            return false;
+        }
+    </script>
+    <div id="Permiso">
+        <div id="Mensajes">
+            @if (ViewBag.Msg != null)
+            {
+                foreach (Mensaje m in ViewBag.Msg)
+                {
+
+                    string alertClase = "";
+                    string tituloMensaje = "";
+                    if (m.EsError)
+                    {
+                        alertClase = "alert alert-danger";
+                        tituloMensaje = "¡Ooops!";
+                    }
+                    else
+                    {
+                        alertClase = "alert alert-success";
+                        tituloMensaje = "¡Enhorabuena!";
+                    }
+                    <div class="@alertClase">
+                        <button type="button" class="close" data-dismiss="alert">x</button>
+                        <strong>@tituloMensaje </strong>
+                        @Html.Raw(m.Contenido)
+                    </div>
+
+                }
+            }
+
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            $(".alert-success").fadeTo(10000, 500).slideUp(500, function () {
+                $(".alert-success").slideUp(500);
+            });
+        });
+
+        function MostrarMensaje(titulo, mensaje, error) {
+            if (error == true) {
+                var template = $('#MensajeError')[0];
+            }
+            else {
+                var template = $('#Mensaje')[0];
+            }
+            var clone = document.importNode(template.content, true);
+            $(clone).children('#ContenidoMensaje').children('#TituloMensaje').html(titulo);
+            $(clone).children('#ContenidoMensaje').append(mensaje);
+            $('#Mensajes').append(clone);
+            $(".alert-success").fadeTo(10000, 500).slideUp(500, function () {
+                $(".alert-success").slideUp(500);
+            });
+        }
+    </script>
+</div>
+<template id="MensajeError">
+    <div id="ContenidoMensaje" class="alert alert-danger">
+        <button type="button" class="close" data-dismiss="alert">x</button>
+        <strong id="TituloMensaje"></strong>
+        
+    </div>
+</template>
+<template id="Mensaje">
+    <div id="ContenidoMensaje" class="alert alert-success">
+        <button type="button" class="close" data-dismiss="alert">x</button>
+        <strong id="TituloMensaje"></strong>
+        
+    </div>
+</template>

@@ -1,0 +1,19 @@
+-- =====================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 19/04/2013 
+-- Description:	02-CORE - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- INSERT VALUES: - Inicio
+-- -------------------------
+
+-- Acá vamos a ingresar valores a la tabla, que no respeten las FK, por eso se ejecuta antes.
+
+
+-- ---------------------------
+-- INSERT VALUES: - Fin de la creacion
+-- =====================================================

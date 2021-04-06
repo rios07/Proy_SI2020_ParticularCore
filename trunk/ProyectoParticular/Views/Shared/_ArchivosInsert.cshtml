@@ -1,0 +1,373 @@
+﻿@using ControladoresCore.Extensiones
+@using (Html.BeginCard("Archivos", ""))
+{
+    <div class="form-horizontal" id="ArchivosDeRegistro">
+
+    </div>
+    <br>
+    <input id="files" style="visibility: hidden" name="file" type="file" onchange="listarArchivos()" multiple="true" value="">
+    <div id="divObs" name="divAdjuntarArchivos" style="visibility: hidden" class="form-horizontal">
+
+    </div>
+}
+
+
+<template id="tempBotonesUpdate">
+    <div style="text-align: center;" class="row pull-right m5">
+
+        <a class="btn btn-primary  boton-archivo " style="margin-right: 20px; padding-right: 20px; width: 103.58px;" id="BotonEditar_" data-val="" onclick="PrepararUpdate($(this), this.dataset.val);">Editar</a>
+
+
+        <a class="btn btn-danger  boton-archivo " style="margin-right: 50px; padding-left: 11px; width: 103.58px;" id="BotonEliminar_" data-val="" onclick="EliminarArchivo(this.dataset.val);">Eliminar</a>
+
+    </div>
+</template>
+
+<template id="tempInputsUpdate">
+    <input size="500" id="NombreUpdate_" placeholder="Nombre" class="form-control" type="text">
+    <input size="500" id="ObsUpdate_" placeholder="Observaciones" class="form-control" type="text">
+</template>
+
+<template id="tempLabelsUpdate">
+    <h4 class="media-heading nombre"></h4>
+    <p class="obs"></p>
+</template>
+
+<script type="text/javascript">
+    var divInsert = null;
+
+    function MostrarFormularioArchivo() {
+        var DivArchivo = $("div[name='divAdjuntarArchivos']");
+        var Boton = document.getElementById("Boton");
+        var BotonDefault = document.getElementById("BotonDefault");
+        var MainForm = $("form[method='post']");
+        var InputArchivo = $("#files");
+        if (DivArchivo.css("visibility") == "hidden") {
+            DivArchivo.css("visibility", "visible");
+            InputArchivo.css("visibility", "visible");
+            Boton.innerHTML = "Cancelar";
+            Boton.className = "btn btn-danger";
+
+            DivArchivo.css("visibility", "visible");
+            MainForm.prop("action", '@Url.Action("UpdateAdjuntos")' + "/" + @Model.Id);
+            MainForm.prop("enctype", "multipart/form-data");
+            InputArchivo.focus();
+
+        } else {
+            document.getElementById("files").value = "";
+            DivArchivo.css("visibility", "hidden");
+            $("#divObs").empty();
+            InputArchivo.css("visibility", "hidden");
+            Boton.innerHTML = "Adjuntar Archivos";
+            Boton.className = "btn btn-default";
+            if (BotonDefault.style.visibility == 'hidden') {
+                BotonDefault.style.visibility = 'visible';
+            }
+            MainForm.prop("action", '@Url.Action("Update")');
+            MainForm.prop("enctype", "");
+        }
+    }
+
+    $(function() {
+        divInsert = $("#ArchivosDeRegistro");
+        CargarArchivos();
+        DesactivarEnterForm();
+        AgregarABotonera(
+            '<a id="Boton" class="btn btn-default" href="#files" style="border-color:#0cacd3" onclick="MostrarFormularioArchivo();">Adjuntar Archivos</a>');
+
+    });
+
+    function CargarArchivos(highlightId) {
+        var datos = {
+            pRegistroId: $("#Id").val()
+        };
+
+        $.ajax({
+            url: '@Url.Action("CargarArchivos")',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function(data) {
+                $.get("/TemplateArchivosEditar.html",
+                    function(template) {
+                        divInsert.empty();
+                        data.forEach(function(item) {
+                            MostrarArchivo(item, template);
+                        });
+                        ReemplazarBotones();
+                        $('.mdi.mdi-arrow-up-bold').eq(0).css('background-color', 'grey');
+                        //setTimeout(function () { Highlight(highlightId); }, 1000);
+                    });
+
+            },
+            data: JSON.stringify(datos),
+        });
+
+    }
+
+    function Highlight(id) {
+        $("#archivo_" + id).effect("highlight", { color: '#CCCCCC' }, 700);
+    }
+
+    function MostrarArchivo(item, template) {
+        for (var field in item)
+            while (template.indexOf("[" + field + "]") != -1)
+                if (item[field] != null)
+                    template = template.replace("[" + field + "]", item[field]);
+                else
+                    template = template.replace("[" + field + "]", "");
+
+        divInsert.append(template);
+    }
+
+    function listarArchivos() {
+        var DivArchivo = $("div[name='divAdjuntarArchivos']");
+        DivArchivo.empty();
+        $.get("/TemplateArchivosAgregar.html",
+            function(template) {
+                var numArchivos = $("#files")[0].files.length;
+                for (i = 0; i < numArchivos; i++) {
+                    PrepararInsert($("#files")[0].files[i].name, template, i);
+                }
+            });
+    }
+
+    function ReloadArchivos(DivArchivoActual) {
+        var offset = 0;
+        var indiceActual = IndiceActual(DivArchivoActual);
+        //$($(".archivo")[indiceActual]).effect("highlight", { color: '#CCCCCC' }, 700);
+        //$($(".archivo")[indiceActual +1 ]).effect("highlight", { color: '#CCCCCC' }, 700);
+    }
+
+    function IndiceActual(DivArchivoActual) {
+        var Divs = $(".archivo");
+        var A = $(DivArchivoActual.parent().parent()[0]);
+        for (var i = 0; i < Divs.length; i++) {
+            B = $(Divs[i]);
+            if (A.attr('id') == B.attr('id'))
+                return i;
+        }
+    }
+
+
+    function SwapArchivos(ArchivoId, DivArchivoActual) {
+        var datos = {
+            pRegistroId: @Model.Id,
+            pArchivoId: ArchivoId
+        };
+
+        $.ajax({
+            url: '@Url.Action("SwapArchivos")',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function(data) {
+                $.get("/TemplateArchivosEditar.html",
+                    function(template) {
+                        divInsert.empty();
+                        data.forEach(function(item) {
+                            MostrarArchivo(item, template);
+
+                        });
+                        ReloadArchivos(DivArchivoActual);
+                        ReemplazarBotones();
+                        $('.mdi.mdi-arrow-up-bold').eq(0).css('background-color', 'grey');
+                    });
+            },
+            data: JSON.stringify(datos)
+        });
+
+    }
+
+    function PrepararInsert(FileName, template, num) {
+        var DivArchivo = $("div[name='divAdjuntarArchivos']");
+        template = template.replace(
+            "<i onclick=\"SwapArchivos([Id],$(this));\" class=\"mdi mdi-arrow-up-bold\" style=\"font-size:160%; border-radius: 4px; padding: 2px 4px; cursor:pointer; background-color:DodgerBlue; border: none; color: white;\"></i>",
+            "");
+        template = template.replace(
+            "<a class=\"btn btn-danger align-middle boton-archivo\" id=\"BotonEliminar_[Id]\" data-val=\"\" onclick=\"EliminarArchivo([Id]);\">Eliminar</a>",
+            "");
+        template = template.replace(
+            "<a class=\"btn btn-primary align-middle boton-archivo\" id=\"BotonEditar_[Id]\" data-val=\"\" onclick=\"PrepararUpdate($(this), [Id]);\">Editar</a>",
+            "");
+        template = template.replace("[NumeroArchivo]", num);
+        template = template.replace("[srcIcono]", "Intranet/__Contenidos/Contextos/images/iconos/new.png");
+        template = template.replace("[NombreAMostrar]",
+            "<input type=\"text\" id=\"Nombre\" placeholder=\"Nombre\" name=\"pArchivos[" +
+            num +
+            "].NombreAMostrar\" value=\"" +
+            FileName +
+            "\" class=\"form-control\">");
+        template = template.replace("[Observaciones]",
+            "<input type=\"text\" id=\"Obs\" placeholder=\"Observaciones\" name=\"pArchivos[" +
+            num +
+            "].Observaciones\" class=\"form-control\">");
+        template = template.replace("[Ruta]", "\" style =\"visibility:hidden");
+        DivArchivo.append(template);
+        DivArchivo.find(".archivo").addClass("fade-in");
+    }
+
+    function ReemplazarBotones() {
+        $(".archivo").each(function(iterador) {
+            $(this).find(".archivo-botones").html(ArmarBotonesUpdate($($(".archivo")[iterador]).attr("value")));
+        });
+    }
+
+    function PrepararUpdate(boton, id) {
+        var BotonDefault = document.getElementById("BotonDefault");
+        var divArchivo = $("#archivo_" + id);
+        var divDatos = divArchivo.find(".datos");
+        var divNombre = divDatos.find(".nombre");
+        var divObs = divArchivo.find(".datos .obs");
+        var nombre = divNombre.contents().text();
+        var obs = divObs.contents().text();
+        var DivArchivosNuevos = $("div[name='divAdjuntarArchivos']");
+        divDatos.html(ArmarInputsUpdate(id, nombre, obs));
+        if (DivArchivosNuevos.css("visibility") == "visible") {
+            MostrarFormularioArchivo();
+        }
+        boton.html("Actualizar");
+        boton.attr('onclick', 'UpdateArchivo($(this), this.dataset.val);');
+        BotonDefault.disabled = true;
+        $("#BotonEliminar_" + id).html("Cancelar");
+        $("#BotonEliminar_" + id).attr('onclick', 'CancelarUpdate(this.dataset.val);');
+    }
+
+    function UpdateArchivo(boton, id) {
+        var datos = {
+            NombreAMostrar: $("#NombreUpdate_" + id).val(),
+            Observaciones: $("#ObsUpdate_" + id).val(),
+            RegistroId: $("#Id").val(),
+            Id: id
+        };
+        BotonDefault.disabled = false;
+        $.ajax({
+            url: '@Url.Action("UpdateArchivo")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function(retorno) {
+                $.get("/TemplateArchivosEditar.html",
+                    function(template) {
+                        CargarArchivos();
+                    });
+                $("#archivo_" + id).effect("highlight", { color: '#CCCCCC' }, 1500);
+            },
+        });
+    }
+
+    function DesactivarEnterForm() {
+        $(window).keydown(function(event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+    }
+
+    function CancelarUpdate(id) {
+        var BotonDefault = document.getElementById("BotonDefault");
+        var nombre = $("#NombreUpdate_" + id)[0].dataset.nombre;
+        var obs = $("#ObsUpdate_" + id)[0].dataset.obs;
+        BotonDefault.disabled = false;
+        $("#ArchivosDatos_" + id).html(ArmarLabelsUpdate(nombre, obs));
+        $("#ArchivosBotones_" + id).html(ArmarBotonesUpdate(id));
+    }
+
+    function EliminarArchivo(id) {
+        swal({
+            title: "¿Seguro desea eliminar este registro?",
+            type: "warning",
+            showCancelButton: true,
+            confirmButtonClass: "btn-danger",
+            confirmButtonText: "Eliminar",
+            cancelButtonText: "No",
+        }).then((isConfirm) => {
+            if (isConfirm) {
+                $('#archivo_' + id).toggleClass('fade-out');
+                setTimeout($.get,
+                    1000,
+                    '@Url.Action("BorrarArchivo")' + "/" + id,
+                    function(retorno) {
+                        if (retorno) {
+                            CargarArchivos();
+                        }
+                    }
+                );
+            }
+
+        });
+
+
+    }
+
+
+    @*function EliminarArchivo(id)
+    {
+        if (confirm("Esta seguro que desea eliminar el archivo?")) {
+            $('#archivo_' + id).toggleClass('fade-out');
+            setTimeout($.get,
+                1000,
+                '@Url.Action("BorrarArchivo")' + "/" + id,
+                function (retorno) {
+                        if (retorno) {
+                            CargarArchivos();
+                        }
+                }
+            );
+        }
+    }*@
+
+    function ArmarBotonesUpdate(id) {
+        var template = $('#tempBotonesUpdate')[0];
+        var clone = document.importNode(template.content, true);
+
+        var btnEditar = clone.querySelector("#BotonEditar_");
+        btnEditar.id += id;
+        btnEditar.dataset.val = id;
+
+        var btnEliminar = clone.querySelector("#BotonEliminar_");
+        btnEliminar.id += id;
+        btnEliminar.dataset.val = id;
+
+        return clone;
+    }
+
+    function ArmarInputsUpdate(id, nombre, obs) {
+        var template = $('#tempInputsUpdate')[0];
+        var clone = document.importNode(template.content, true);
+
+        var inputNombre = clone.querySelector("#NombreUpdate_");
+        inputNombre.id += id;
+        inputNombre.value = nombre;
+        inputNombre.dataset.nombre = nombre;
+
+        var inputObs = clone.querySelector("#ObsUpdate_");
+        inputObs.id += id;
+        inputObs.value = obs;
+        inputObs.dataset.obs = obs;
+
+        return clone;
+    }
+
+    function ArmarLabelsUpdate(nombre, obs) {
+        var template = $('#tempLabelsUpdate')[0];
+        var clone = document.importNode(template.content, true);
+
+        var lblNombre = clone.querySelector(".nombre");
+        lblNombre.textContent = nombre;
+
+        var lblObs = clone.querySelector(".obs");
+        lblObs.textContent = obs;
+
+        return clone;
+    }
+
+</script>
+
+<style>
+    .media hr { margin: 5px; }
+
+    .datos h4 { font-size: 16px; }
+</style>

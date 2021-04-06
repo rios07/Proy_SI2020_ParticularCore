@@ -1,0 +1,999 @@
+-- =====================================================
+-- Descripción: Insertamos valor prioritarios, sin los cuales el sistema no funciona.
+-- Script: DB_ParticularCore__C19c_Insert Values del Sistema_Prioritarios 3 - Paginas Específicas.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+
+				-- Variable que utilizamos en los insert - INICIO
+					DECLARE	@Seccion_Administracion VARCHAR(30)
+						,@Seccion_Intranet VARCHAR(30)
+						,@Seccion_Web VARCHAR(30)
+						,@Seccion_PrivadaDelUsuario VARCHAR(30)
+		
+					EXEC @Seccion_Administracion = ufc_Secciones__Administracion
+					EXEC @Seccion_Intranet = ufc_Secciones__Intranet
+					EXEC @Seccion_Web = ufc_Secciones__Web
+					EXEC @Seccion_PrivadaDelUsuario = ufc_Secciones__PrivadaDelUsuario
+					
+					DECLARE @RolDeUsuario_SoloLogin VARCHAR(80)
+						,@RolDeUsuario_Operador VARCHAR(80)
+						,@RolDeUsuario_OperadorAvanzado VARCHAR(80)
+						,@RolDeUsuario_Administrador VARCHAR(80)
+						,@RolDeUsuario_MasterAdmin VARCHAR(80)
+						,@RolDeUsuario_PedirSoportes VARCHAR(80)
+						,@RolDeUsuario_AdministrarSoportes VARCHAR(80)
+						,@RolDeUsuario_NotificarPorInformes VARCHAR(80)
+						,@RolDeUsuario_NotificarPorUsuarios VARCHAR(80)
+					
+					EXEC @RolDeUsuario_SoloLogin = ufc_RolesDeUsuarios__SoloLogin
+					EXEC @RolDeUsuario_Operador = ufc_RolesDeUsuarios__Operador
+					EXEC @RolDeUsuario_OperadorAvanzado = ufc_RolesDeUsuarios__OperadorAvanzado
+					EXEC @RolDeUsuario_Administrador = ufc_RolesDeUsuarios__Administrador
+					EXEC @RolDeUsuario_MasterAdmin = ufc_RolesDeUsuarios__MasterAdmin
+					EXEC @RolDeUsuario_PedirSoportes = ufc_RolesDeUsuarios__PedirSoportes
+					EXEC @RolDeUsuario_AdministrarSoportes = ufc_RolesDeUsuarios__AdministrarSoportes
+					EXEC @RolDeUsuario_NotificarPorInformes = ufc_RolesDeUsuarios__NotificarPorInformes
+					EXEC @RolDeUsuario_NotificarPorUsuarios = ufc_RolesDeUsuarios__NotificarPorUsuarios
+					
+					DECLARE @UsuarioQueEjecutaId	INT = '1' -- OJO, q si va UsuarioId=1 -- > Va En ContextoId=1 --> no logueable
+						,@FechaDeEjecucion			DATETIME = GetDate()
+						
+						,@Token                     VARCHAR(40) = 'OperacionDeCore'
+ 						
+ 						--,@Seccion					VARCHAR(30) = @Seccion_Administracion -- Las páginas que se crearán deben ir es esta sección.
+						,@CodigoDelContexto			VARCHAR(40) = NULL
+						
+						,@sResSQL VARCHAR(1000)	
+						,@id INT
+						
+						,@RolDeUsuario_Matriculados VARCHAR(80) = 'Matriculados'
+						
+						,@IconoGenericoCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'Default-*')
+						,@IconoOjoCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'Ojo')
+						,@IconoPencilCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'pencil square')
+						,@IconoPenCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'Basic Pen')
+						,@IconoSupportCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'Soportes')
+						,@IconoGrupoCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'Grupo')
+						,@IconoActoresCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'software')
+						,@IconoWarningCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'warning')
+						,@IconoBasicWebpageCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'basicwarning')
+						,@IconoWebpageCSSId INT = (SELECT id FROM IconosCSS WHERE Nombre = 'webpage')
+						,@SaltarRegistrosExistentes BIT = '1'
+						,@RealizarUpdateSiElRegistroExiste BIT = '1'
+						,@TablaDeCore BIT = '0'
+						,@Nombre VARCHAR(100)
+						,@Mensaje VARCHAR(MAX)
+						,@TablaDelExec VARCHAR(80)
+						
+						,@TablaId INT
+						,@FuncionDePaginaId INT
+				-- Variable que utilizamos en los insert - FIN
+
+
+
+
+-- INSERT VALUES: Paginas - INICIO
+	PRINT 'Insertando Paginas:'
+	
+	SET @TablaDelExec = 'Paginas'
+	
+	-- Usuarios: INICIO			
+		SET @Nombre = '#Usuarios-CambiarPassword#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Usuarios')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'CambiarPassword')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_PrivadaDelUsuario 
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_SoloLogin
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_SoloLogin
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_MasterAdmin
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_MasterAdmin
+				,@SeMuestraEnAsignacionDePermisos = '0'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END  
+		 		
+	 		
+		SET @Nombre = '#Usuarios-ResetPassword#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Usuarios')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'ResetPassword')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Administracion 
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Administrador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Administrador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Administrador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Administrador
+				,@SeMuestraEnAsignacionDePermisos = '0'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Usuarios: FIN
+			
+	
+	-- Contactos: INICIO
+		SET @Nombre = '#Contactos-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Contactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Contactos-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Contactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Contactos-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Contactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Contactos-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Contactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Contactos: FIN
+			
+	
+	-- GruposDeContactos: INICIO
+		SET @Nombre = '#GruposDeContactos-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'GruposDeContactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#GruposDeContactos-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'GruposDeContactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#GruposDeContactos-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'GruposDeContactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#GruposDeContactos-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'GruposDeContactos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- GruposDeContactos: FIN
+			
+	
+	-- Informes: INICIO
+		SET @Nombre = '#Informes-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Informes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Informes-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Informes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Informes-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Informes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Informes-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Informes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Informes: FIN
+			
+	
+	-- Notas: INICIO
+		SET @Nombre = '#Notas-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notas-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notas-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notas-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Notas: FIN
+			
+	
+	-- ReservasDeRecursos: INICIO
+		SET @Nombre = '#ReservasDeRecursos-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ReservasDeRecursos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#ReservasDeRecursos-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ReservasDeRecursos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#ReservasDeRecursos-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ReservasDeRecursos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#ReservasDeRecursos-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'ReservasDeRecursos')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- ReservasDeRecursos: FIN
+			
+	
+	-- Soportes: INICIO
+		SET @Nombre = '#Soportes-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Soportes-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Soportes-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Soportes-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Soportes: FIN
+			
+	
+	-- Tareas: INICIO
+		SET @Nombre = '#Tareas-Insert#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Tareas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Tareas-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Tareas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Tareas-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Tareas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Tareas-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Tareas')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_Intranet
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Tareas: FIN
+			
+	
+	-- Notificaciones: INICIO
+		--	SET @Nombre = '#Notificaciones-Insert#'
+		--	SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notificaciones')
+		--	SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+		--	EXEC usp_Paginas__InsertSegunPrioridadRoles  
+		--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+		--			,@FechaDeEjecucion = @FechaDeEjecucion 
+		--			,@Token = @Token 
+		--			,@Seccion = @Seccion_PrivadaDelUsuario
+		--			,@CodigoDelContexto = @CodigoDelContexto
+		--			,@TablaId = @TablaId
+		--			,@FuncionDePaginaId = @FuncionDePaginaId
+		--			,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+		--			,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+		--			,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+		--			,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+		--			,@SeMuestraEnAsignacionDePermisos = '1'
+		--			,@sResSQL = @sResSQL OUTPUT
+		--			,@id = @id OUTPUT
+		--			--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+		--			SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+		--			IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notificaciones-Registro#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notificaciones')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_PrivadaDelUsuario
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notificaciones-Update#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notificaciones')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_PrivadaDelUsuario
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+				
+				
+		SET @Nombre = '#Notificaciones-Listado#'
+		SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Notificaciones')
+		SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+		EXEC usp_Paginas__InsertSegunPrioridadRoles  
+				@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+				,@FechaDeEjecucion = @FechaDeEjecucion 
+				,@Token = @Token 
+				,@Seccion = @Seccion_PrivadaDelUsuario
+				,@CodigoDelContexto = @CodigoDelContexto
+				,@TablaId = @TablaId
+				,@FuncionDePaginaId = @FuncionDePaginaId
+				,@RolMenosPrioritarioQueCarga = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueOpera = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueVerRegAnulados = @RolDeUsuario_Operador
+				,@RolMenosPrioritarioQueAccionesEspeciales = @RolDeUsuario_Operador
+				,@SeMuestraEnAsignacionDePermisos = '1'
+				,@sResSQL = @sResSQL OUTPUT
+				,@id = @id OUTPUT
+				--SELECT 'Pagina insertada id = ' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')	
+				SELECT @Mensaje = '@sResSQL=' + COALESCE(@sResSQL, '-NULL-') + ' // Tabla=' + COALESCE(@TablaDelExec, '-NULL-') + ' // RegistroNombre=' + COALESCE(@Nombre, '-NULL-') +  ' // id=' + COALESCE(CAST(@id AS VARCHAR(MAX)), '-NULL-')
+				IF @sResSQL = '' BEGIN PRINT @Mensaje END ELSE BEGIN RAISERROR (@Mensaje, 16, 1) END
+	-- Notificaciones: FIN
+	
+			
+-- INSERT VALUES: Paginas - FIN										
+										
+										
+
+
+
+-- // LE DAMOS PERMISOS AL MASTER ADMIN EN TODAS LAS PÁGINAS DE SOPORTES
+-- INSERT VALUES: RelAsig_RolesDeUsuarios_A_Paginas - INICIO 
+	--PRINT 'Actualizando: RelAsig_RolesDeUsuarios_A_Paginas'
+	
+	--SET @RolDeUsuarioId = '1' -- MASTER ADMIN
+
+	--SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+	--SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Insert')
+	--SET @PaginaId = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+	--SET @id = (SELECT id FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE PaginaId = @PaginaId AND RolDeUsuarioId = @RolDeUsuarioId)
+	--SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como estaba antes.
+	--EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id  
+	--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+	--			,@FechaDeEjecucion = @FechaDeEjecucion 
+	--			,@Token = @Token 
+	--			,@Seccion = @Seccion_Administracion 
+	--			,@CodigoDelContexto = @CodigoDelContexto
+	--			,@id = @id
+	--			,@AutorizadoA_CargarLaPagina = '1'
+	--			,@AutorizadoA_OperarLaPagina = '1'
+	--			,@AutorizadoA_VerRegAnulados = '1'
+	--			,@AutorizadoA_AccionesEspeciales = '1'
+	--			,@sResSQL = @sResSQL OUTPUT
+	--			SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como está después.
+	
+
+	--SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+	--SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Registro')
+	--SET @PaginaId = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+	--SET @id = (SELECT id FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE PaginaId = @PaginaId AND RolDeUsuarioId = @RolDeUsuarioId)
+	--SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como estaba antes.
+	--EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id  
+	--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+	--			,@FechaDeEjecucion = @FechaDeEjecucion 
+	--			,@Token = @Token 
+	--			,@Seccion = @Seccion_Administracion 
+	--			,@CodigoDelContexto = @CodigoDelContexto
+	--			,@id = @id
+	--			,@AutorizadoA_CargarLaPagina = '1'
+	--			,@AutorizadoA_OperarLaPagina = '1'
+	--			,@AutorizadoA_VerRegAnulados = '1'
+	--			,@AutorizadoA_AccionesEspeciales = '1'
+	--			,@sResSQL = @sResSQL OUTPUT
+	--			SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como está después.
+	
+	
+	--SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+	--SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Update')
+	--SET @PaginaId = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+	--SET @id = (SELECT id FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE PaginaId = @PaginaId AND RolDeUsuarioId = @RolDeUsuarioId)
+	--SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como estaba antes.
+	--EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id  
+	--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+	--			,@FechaDeEjecucion = @FechaDeEjecucion 
+	--			,@Token = @Token 
+	--			,@Seccion = @Seccion_Administracion 
+	--			,@CodigoDelContexto = @CodigoDelContexto
+	--			,@id = @id
+	--			,@AutorizadoA_CargarLaPagina = '1'
+	--			,@AutorizadoA_OperarLaPagina = '1'
+	--			,@AutorizadoA_VerRegAnulados = '1'
+	--			,@AutorizadoA_AccionesEspeciales = '1'
+	--			,@sResSQL = @sResSQL OUTPUT
+	--			SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como está después.
+	
+	
+	--SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+	--SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'Listado')
+	--SET @PaginaId = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+	--SET @id = (SELECT id FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE PaginaId = @PaginaId AND RolDeUsuarioId = @RolDeUsuarioId)
+	--SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como estaba antes.
+	--EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id  
+	--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+	--			,@FechaDeEjecucion = @FechaDeEjecucion 
+	--			,@Token = @Token 
+	--			,@Seccion = @Seccion_Administracion 
+	--			,@CodigoDelContexto = @CodigoDelContexto
+	--			,@id = @id
+	--			,@AutorizadoA_CargarLaPagina = '1'
+	--			,@AutorizadoA_OperarLaPagina = '1'
+	--			,@AutorizadoA_VerRegAnulados = '1'
+	--			,@AutorizadoA_AccionesEspeciales = '1'
+	--			,@sResSQL = @sResSQL OUTPUT
+	--			SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como está después.
+	
+	
+	--SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = 'Soportes')
+	--SET @FuncionDePaginaId = (SELECT id FROM FuncionesDePaginas WHERE Nombre = 'ListadoAvanzado')
+	--SET @PaginaId = (SELECT id FROM Paginas WHERE TablaId = @TablaId AND FuncionDePaginaId = @FuncionDePaginaId)
+	--SET @id = (SELECT id FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE PaginaId = @PaginaId AND RolDeUsuarioId = @RolDeUsuarioId)
+	--SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como estaba antes.
+	--EXEC usp_RelAsig_RolesDeUsuarios_A_Paginas__Update_by_@id  
+	--			@UsuarioQueEjecutaId = @UsuarioQueEjecutaId 
+	--			,@FechaDeEjecucion = @FechaDeEjecucion 
+	--			,@Token = @Token 
+	--			,@Seccion = @Seccion_Administracion 
+	--			,@CodigoDelContexto = @CodigoDelContexto
+	--			,@id = @id
+	--			,@AutorizadoA_CargarLaPagina = '1'
+	--			,@AutorizadoA_OperarLaPagina = '1'
+	--			,@AutorizadoA_VerRegAnulados = '1'
+	--			,@AutorizadoA_AccionesEspeciales = '1'
+	--			,@sResSQL = @sResSQL OUTPUT
+	--			SELECT * FROM RelAsig_RolesDeUsuarios_A_Paginas WHERE id = @id -- Para ver como está después.
+		
+-- INSERT VALUES: RelAsig_RolesDeUsuarios_A_Paginas - FIN
+
+
+-- =====================================================
+-- Script: DB_ParticularCore__C19c_Insert Values del Sistema_Prioritarios 3 - Paginas Específicas.sql - FIN
+-- -------------------------

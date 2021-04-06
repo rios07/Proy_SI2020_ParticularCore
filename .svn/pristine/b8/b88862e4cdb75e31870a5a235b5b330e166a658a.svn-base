@@ -1,0 +1,138 @@
+﻿<script>
+
+
+    function initMap() {
+        var mapCanvas = document.getElementById("map");
+        var mapOptions = {
+            center: new google.maps.LatLng(-34.595081, -58.436884),
+            zoom: 12
+        };
+        var map = new google.maps.Map(mapCanvas, mapOptions);
+
+        var srcKML = 'http://www.iatasa.com/rec.txt';
+
+        var kmlLayer = new google.maps.KmlLayer(srcKML,
+            {
+                suppressInfoWindows: true,
+                preserveViewport: false,
+                map: map
+            });
+
+        kmlLayer.addListener('click',
+            function(kmlEvent) {
+                var text = kmlEvent;
+                showInContentWindow(kmlEvent);
+            });
+
+        var contentString = '<div id="content">' +
+            '<div id="siteNotice">' +
+            '</div>' +
+            '<h3 id="firstHeading" class="firstHeading">Inspección N° 1</h3>' +
+            '<div id="bodyContent">' +
+            '<table>' +
+            '<tr>' +
+            '<td><img src="https://www.w3schools.com/bootstrap/sanfran.jpg" class="img-responsive img-thumbnail" alt="Cinque Terre" style="float: left; width:204px;height:auto;"></td>' +
+            '<td><h5>Fecha de inspección: 18/12/2018</h5><p>Observaciones: observaciones de la inspección</p></td>' +
+            '</tr>' +
+            '</table>' +
+            '</div>' +
+            '</div>';
+
+
+        function showInContentWindow(kmlEvent) {
+            var infowindow = new google.maps.InfoWindow({
+                content: contentString,
+                position: new google.maps.LatLng(kmlEvent.latLng.lat(), kmlEvent.latLng.lng())
+            });
+            infowindow.open(map);
+        }
+
+        var filtros = Array();
+        $("[filtro]").each(function(i, v) {
+            var filtro = { key: "", value: "" };
+            filtro.key = $(this).attr('filtro');
+            filtro.value = $(this).val();
+            filtros[i] = filtro;
+        });
+        $.ajax({
+            url: '@Url.Action("CargarMarcadores")', //Usando razor en js, voilá
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function(datos) {
+
+                datos.forEach(function(item) {
+                    var longitud = parseFloat(item.Longitud);
+                    var latitud = parseFloat(item.Latitud);
+                    var posi = new google.maps.LatLng({ lat: latitud, lng: longitud });
+                    var marker = new google.maps.Marker({
+                        position: posi,
+                        url: '/Inspecciones/Registro/' + item.Id,
+                        title: 'Inspeccion Numero: ' + item.Numero,
+                        map: map
+                    });
+                    google.maps.event.addListener(marker,
+                        'click',
+                        function() {
+                            window.location.href = this.url;
+                        });
+                });
+
+            },
+            data: JSON.stringify(filtros)
+        });
+    }
+
+    function MapConFiltro(Tipo, FechaDesde, FechaHasta) {
+        var filtros = Array();
+        $("[filtro]").each(function(i, v) {
+            var filtro = { key: "", value: "" };
+            filtro.key = $(this).attr('filtro');
+            filtro.value = $(this).val();
+            filtros[i] = filtro;
+        });
+        $("#map").children().remove();
+        $.ajax({
+            url: '@Url.Action("CargarMarcadores")', //Usando razor en js, voilá
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function(data) {
+                var mapCanvas = document.getElementById("map");
+                var mapOptions = {
+                    center: new google.maps.LatLng(-34.595081, -58.436884),
+                    zoom: 12
+                };
+
+                var map = new google.maps.Map(mapCanvas, mapOptions);
+                data.forEach(function(item) {
+
+                    var longitud = parseFloat(item.Longitud);
+                    var latitud = parseFloat(item.Latitud);
+                    var posi = new google.maps.LatLng({ lat: latitud, lng: longitud });
+                    var marker = new google.maps.Marker({
+                        position: posi,
+                        url: '/Inspecciones/Registro/' + item.Id,
+                        title: 'Inspeccion Numero: ' + item.Numero,
+                        map: map
+                    });
+                    google.maps.event.addListener(marker,
+                        'click',
+                        function() {
+                            window.location.href = this.url;
+                        });
+
+                });
+            },
+            data: JSON.stringify(filtros)
+        });
+    }
+
+    function LimpiarFiltros() {
+        $('#TipoDeInspeccionId').val(null);
+        $('#FechaDesde').val(null);
+        $('#FechaHasta').val(null);
+    }
+
+
+</script>

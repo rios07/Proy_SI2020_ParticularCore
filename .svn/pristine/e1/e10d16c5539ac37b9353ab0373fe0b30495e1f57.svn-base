@@ -1,0 +1,2130 @@
+-- =====================================================
+-- Descripción: ABMs Particulares no prioritarios.
+-- Script: 11b_Core__ABMs Particulares.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO 
+
+
+		-- Tablas Involucradas: - INICIO
+				-- usp_TablaDinamica_DeleteOActivo_by_@id
+				-- usp_TablaDinamica_SwapOrden
+				-- usp_TablaDinamica_Update_@Campo_by_@id
+				-- Archivos
+				-- usp_Dispositivos__Update_DatosTecnicos
+				-- usp_Dispositivos__Update_by_@Imei
+				-- Importaciones
+				-- Notificaciones
+				-- RecorridosDeDispositivos
+				-- usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId
+				-- ReservasDeRecursos
+				-- Soportes
+				-- Tareas
+		-- Tablas Involucradas: - FIN
+		
+
+
+
+-- SP-TABLA: #TablaDinamica# /ABMs/ - INICIO
+IF (OBJECT_ID('usp_TablaDinamica_DeleteOActivo_by_@id') IS NOT NULL) DROP PROCEDURE usp_TablaDinamica_DeleteOActivo_by_@id
+GO
+CREATE PROCEDURE usp_TablaDinamica_DeleteOActivo_by_@id
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		,@Token							VARCHAR(40) = '' -- = '' cuando es desde una PC --> "sin dispositivo".
+		
+		,@id							INT		
+		,@Tabla							VARCHAR(80)
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT		
+	AS
+	BEGIN TRY
+		DECLARE --@Tabla VARCHAR(80) = ''
+		-- El permiso de "Eliminar" o "Activar/Anular" un registro se define por el bit AutorizadoA_OperarLaPagina de la pagina "Registro".
+			@FuncionDePagina VARCHAR(30) = 'Registro'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Los permisos se evalúan contra la tabla: @Tabla
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @LlevaActivo BIT, @PermiteEliminar BIT
+				
+				SELECT @PermiteEliminar = PermiteEliminar, @LlevaActivo = LlevaActivo FROM Tablas WHERE Nombre = @Tabla
+						
+				IF (@PermiteEliminar = 0 AND @LlevaActivo = 0) --> ESTA TABLA NO PERMITE NI ELIMINAR NI ANULAR.
+					BEGIN
+						SET @sResSQL = 'Se produjo un error. Esta tabla no permite la acción indicada.'
+					END
+				
+				--DECLARE @Existe BIT  <-- Con el rowcount sale si no se realizó la acción
+				--SELECT @Existe = id FROM Actores WHERE id = @id AND ContextoId = @ContextoId
+						
+				DECLARE @sSQL NVARCHAR(500), @Parametros NVARCHAR(500)
+				
+				DECLARE @RegistrosAfectados INT, @NumeroDeError2 INT -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+						
+				IF (@PermiteEliminar = 1) --> Es una operación de eliminar
+					BEGIN
+						SET NOCOUNT ON
+						
+						SET @Parametros = N'@id INT'
+						SELECT @sSQL = N'DELETE FROM ' + QUOTENAME(@Tabla) + ' WHERE id = @id'
+						EXEC  sp_executesql @sSQL, @Parametros, @id = @id
+						
+						SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+						
+						SET @FuncionDePagina = 'Delete' -- ESTO LO UTILIZA AL FINAL PARA EL LogRegistros
+					END
+				ELSE --> Es una operación de Activo/Anulo
+					BEGIN
+						SET NOCOUNT ON
+						
+						DECLARE @Activo BIT				
+						SET @Parametros = N'@id INT, @Activo BIT OUTPUT'
+						SELECT @sSQL = N' SELECT @Activo = Activo FROM ' + QUOTENAME(@Tabla) + ' WHERE id = @id'
+						EXEC  sp_executesql @sSQL, @Parametros, @id = @id, @Activo = @Activo OUTPUT
+						
+						--PRINT '@id = ' + CAST(@id as varchar) + ' // @Activo = ' + CAST(@Activo as varchar)
+						
+						SET @Parametros = N'@id INT'
+						SELECT @sSQL = N' UPDATE ' + QUOTENAME(@Tabla) + ' SET Activo = 1 ^ Activo FROM ' + QUOTENAME(@Tabla) + ' WHERE id = @id'
+						EXEC  sp_executesql @sSQL, @Parametros, @id = @id
+				 
+						SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+						
+						-- ESTO LO UTILIZA AL FINAL PARA EL LogRegistros
+						SET @FuncionDePagina =	(
+							CASE WHEN @Activo = 1 THEN 'Anular' -- Estaba Activo
+							WHEN @Activo = 0 THEN 'Activar' -- Estaba Anulado
+							ELSE 'ERROR' END -- Activo = NULL
+						)
+						--PRINT '@FuncionDePagina = ' + @FuncionDePagina
+					END
+					
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @RegistrosAfectados
+					,@NumeroDeError = @NumeroDeError2, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_TablaDinamica_SwapOrden') IS NOT NULL) DROP PROCEDURE usp_TablaDinamica_SwapOrden
+GO
+CREATE PROCEDURE usp_TablaDinamica_SwapOrden
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		
+		,@Tabla							VARCHAR(80) -- Es la Tabla de "referencia" del Registro; EJ: "Informes"
+		,@RegistroId1					INT
+		,@RegistroId2					INT
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT		
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE --@Tabla VARCHAR(80) = 'TablaDinamica' Comentada por que es un parámetro que pasa
+			@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Las validaciones siguientes no las hacemos, ya que luego adentro de cada EXEC, validará.
+		
+		--DECLARE @id INT = @RegistroId1
+		--EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		
+		---- Ahora revisamos que también tiene permiso contra el 2do registro (puede estar anulado)
+		--SET @id = @RegistroId2
+		--IF (@sResSQL = '')
+		--	BEGIN
+		--		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		--	END
+			
+		--IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+		--	BEGIN
+		--		EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		--	END
+		
+		SET @sResSQL = ''
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @TablaId INT
+					,@ValorDeOrden1 INT
+					,@ValorDeOrden2 INT
+					,@ContextoId1 INT
+					,@ContextoId2 INT
+					,@Parametros NVARCHAR(500)
+					,@sSQL NVARCHAR(500)
+					
+				SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				
+				-- 1ero controlamos que si la tabla tiene ContextoId --> que sea el mismo para ambos registros
+				IF COL_LENGTH(@Tabla, 'ContextoId') IS NOT NULL -- La tabla tiene ContextoId.
+					BEGIN
+						SET @Parametros = N'@ValorDeOrden1 INT OUTPUT, @ContextoId1 INT OUTPUT'
+						SET @sSQL = N'SELECT @ValorDeOrden1 = Orden, @ContextoId1 = ContextoId FROM ' + @Tabla + ' WHERE id = ' + CAST(@RegistroId1 AS VARCHAR(MAX))
+						--PRINT @sSQL
+						EXEC  sp_executesql @sSQL, @Parametros, @ValorDeOrden1 = @ValorDeOrden1 OUTPUT, @ContextoId1 = @ContextoId1 OUTPUT
+						
+						SET @Parametros = N'@ValorDeOrden2 INT OUTPUT, @ContextoId2 INT OUTPUT'
+						SET @sSQL = N'SELECT @ValorDeOrden2 = Orden, @ContextoId2 = ContextoId FROM ' + @Tabla + ' WHERE id = ' + CAST(@RegistroId2 AS VARCHAR(MAX))
+						--PRINT @sSQL
+						EXEC  sp_executesql @sSQL, @Parametros, @ValorDeOrden2 = @ValorDeOrden2 OUTPUT, @ContextoId2 = @ContextoId2 OUTPUT
+						
+						IF @ContextoId1 <> @ContextoId2
+							BEGIN
+								SET @sResSQL = 'La acción no puede realizarse por que los registros no pertenecen al mismo contexto.'
+							END
+					END
+				ELSE
+					BEGIN
+						SET @Parametros = N'@ValorDeOrden1 INT OUTPUT'
+						SET @sSQL = N'SELECT @ValorDeOrden1 = Orden FROM ' + @Tabla + ' WHERE id = ' + CAST(@RegistroId1 AS VARCHAR(MAX))
+						--PRINT @sSQL
+						EXEC  sp_executesql @sSQL, @Parametros, @ValorDeOrden1 = @ValorDeOrden1 OUTPUT
+						
+						SET @Parametros = N'@ValorDeOrden2 INT OUTPUT'
+						SET @sSQL = N'SELECT @ValorDeOrden2 = Orden FROM ' + @Tabla + ' WHERE id = ' + CAST(@RegistroId2 AS VARCHAR(MAX))
+						--PRINT @sSQL
+						EXEC  sp_executesql @sSQL, @Parametros, @ValorDeOrden2 = @ValorDeOrden2 OUTPUT
+					END
+			END
+		
+		IF @sResSQL = ''
+			BEGIN -- 1ero "liberamos" el Orden del registro 2
+				EXEC usp_TablaDinamica_Update_@Campo_by_@id  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@id = @RegistroId2
+					,@Campo = 'Orden'
+					,@ValorDelCampo = '-999999' -- Inicialmente ponemos un Orden cualquiera, para liberar el Orden, ya que no se puede repetir por UQ.
+					,@sResSQL = @sResSQL OUTPUT	
+			END
+			
+		IF @sResSQL = ''
+			BEGIN -- 2do, Seteamos el Orden del Registro 1 con el Orden del Registro 2
+				EXEC usp_TablaDinamica_Update_@Campo_by_@id  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@id = @RegistroId1
+					,@Campo = 'Orden'
+					,@ValorDelCampo = @ValorDeOrden2
+					,@sResSQL = @sResSQL OUTPUT
+			END
+		
+		IF @sResSQL = ''
+			BEGIN -- 3ero, Seteamos el Orden del Registro 2 con el Orden del Registro 1
+				EXEC usp_TablaDinamica_Update_@Campo_by_@id  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@id = @RegistroId2
+					,@Campo = 'Orden'
+					,@ValorDelCampo = @ValorDeOrden1
+					,@sResSQL = @sResSQL OUTPUT	
+			END
+			
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_TablaDinamica_Update_@Campo_by_@id') IS NOT NULL) DROP PROCEDURE usp_TablaDinamica_Update_@Campo_by_@id
+GO
+CREATE PROCEDURE usp_TablaDinamica_Update_@Campo_by_@id
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		,@Token							VARCHAR(40) = '' -- = '' cuando es desde una PC --> "sin dispositivo".
+		
+		,@id							INT		
+		,@Tabla							VARCHAR(80)
+		,@Campo							VARCHAR(80) 
+		,@ValorDelCampo					VARCHAR(MAX)
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT		
+	AS
+	BEGIN TRY
+		DECLARE --@Tabla VARCHAR(80) = ''
+			@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+				
+		-- Los permisos no se evalúan contra la tabla: @Tabla
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				IF COL_LENGTH(@Tabla, @Campo) IS NOT NULL  -- o sea, si la tabla tiene el campo: @Campo
+					BEGIN
+						--DECLARE @Parametros NVARCHAR(500) = N'@ValorDelCampo VARCHAR(MAX)'
+						--DECLARE @sSQL NVARCHAR(500) = N'UPDATE ' + @Tabla + ' SET ' + @Campo + ' = @ValorDelCampo FROM ' + @Tabla + ' WHERE id = ' + @id
+						----PRINT @sSQL
+						--EXEC  sp_executesql @sSQL, @Parametros, @ValorDelCampo = @ValorDelCampo
+						
+						--DECLARE @TipoDeDato VARCHAR(100)
+						--SELECT @Campo = column_name, @TipoDeDato = DATA_TYPE FROM Information_schema.Columns WHERE TABLE_NAME = @Tabla
+						
+						DECLARE @sSQL NVARCHAR(500) = N'UPDATE ' + @Tabla + ' SET ' + @Campo + ' = ' + @ValorDelCampo + ' FROM ' + @Tabla + ' WHERE id = ' + CAST(@id AS VARCHAR(MAX)) 
+						--PRINT @sSQL
+						EXEC  sp_executesql @sSQL
+						
+						---- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+						--EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+						--	,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+						--	,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+					END
+				ELSE
+					BEGIN
+						SET @sResSQL = 'La actualización no puede realizarse. No existe el campo "' + @Campo + '" en la tabla "' + @Tabla + '".'
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: "-todas-" /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Archivos /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Archivos__Insert') IS NOT NULL) DROP PROCEDURE usp_Archivos__Insert
+GO
+CREATE PROCEDURE usp_Archivos__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@Tabla								VARCHAR(80)
+		,@RegistroId						INT
+		,@NombreFisicoCompleto				VARCHAR(100) -- En este caso es el "nombre original con extensión", que no será el definitivo q se almacena.
+		,@NombreAMostrar					VARCHAR(100)
+    	,@Observaciones						VARCHAR(1000)
+	
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE --@Tabla VARCHAR(80) = 'Archivos' Comentada por que es un parámetro que pasa, pero luego de las linas de testeo de permisos la seteamos = 'Archivos' para mantener compatibilidad.
+			@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Las 2 validaciones siguientes no se hacen contra la tabla 'Archivos' sinó contra la del registro relacionado, que pertenece a la tabla @Tabla
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN (En este caso contra la tabla del @RegistroId
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		DECLARE @TablaDelArchivo VARCHAR(80) = @Tabla -- En @TablaDelArchivo guardo la tabla del registro, ya que unas lineas más adelante seteo a @Tabla = 'Archivo' para compatibilidad de funcionalidades
+		SET @Tabla = 'Archivos' -- Hago esto para mantener compatibilidad con las funciones genericas q se utilizan a continuación con @Tabla.
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @NomenclaturaDeTabla	VARCHAR(12)
+				DECLARE @TablaId	INT
+				SELECT @TablaId = id, @NomenclaturaDeTabla = Nomenclatura FROM Tablas WHERE Nombre = @TablaDelArchivo
+				
+				DECLARE @ContextoId	INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)	
+				DECLARE @Orden	INT
+				EXEC @Orden = ufc_ValorSiguiente @Tabla = 'Archivos', @Campo = 'Orden', @ContextoId = @ContextoId
+				
+				DECLARE	@Extension	VARCHAR(8) = (RIGHT(@NombreFisicoCompleto, CHARINDEX('.',REVERSE(@NombreFisicoCompleto))-1))
+				
+				IF (@Extension IS NULL OR @Extension = '')
+					BEGIN
+						SET @sResSQL = 'No se puede concretar la acción. El Archivo ingresado debe incluir una extensión de archivo.'
+					END
+				ELSE
+					BEGIN
+						DECLARE @ExtensionDeArchivoId INT
+						EXEC usp_ExtensionesDeArchivos__id_by_@nombre  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+							,@Nombre = @Extension
+							,@id = @ExtensionDeArchivoId OUTPUT
+							,@sResSQL = @sResSQL OUTPUT
+						
+						IF (@sResSQL = '')
+							BEGIN
+								DECLARE @NumAleatorioDe8Digitos INT = (SELECT ROUND(((99999999 - 1) * RAND() + 1), 0))
+								-- Ejemplo: "Informes_12945678_557_Imagen de una postal.jpg"  (Tabla: Informes, id: 557)
+								SET @NombreFisicoCompleto = @NomenclaturaDeTabla + '_' + CAST(@NumAleatorioDe8Digitos AS VARCHAR(MAX))
+										 + '_' + CAST(@RegistroId AS VARCHAR(MAX)) + '_' + @NombreFisicoCompleto
+							END
+						
+						IF (@sResSQL = '')
+							BEGIN
+								SET NOCOUNT ON
+								INSERT INTO Archivos
+								(
+									ContextoId	
+									,TablaId
+									,RegistroId
+									,NombreFisicoCompleto
+									,NombreAMostrar
+									--,UbicacionId
+									,ExtensionDeArchivoId
+									,Orden
+									--,Codigo
+									,Observaciones
+								)
+								VALUES
+								(
+									@ContextoId
+									,@TablaId
+									,@RegistroId
+									,@NombreFisicoCompleto
+									,@NombreAMostrar
+									--,@UbicacionId
+									,@ExtensionDeArchivoId
+									,@Orden
+									--,Codigo
+									,@Observaciones
+									--,1
+								)
+								
+								SET @id = SCOPE_IDENTITY()
+		
+								-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+								EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+									,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+									,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+							END
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Archivos_SwapOrden') IS NOT NULL) DROP PROCEDURE usp_Archivos_SwapOrden
+GO
+CREATE PROCEDURE usp_Archivos_SwapOrden
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		
+		,@Tabla							VARCHAR(80) -- Es la Tabla de "referencia" del Archivo; EJ: "Informes"
+		,@RegistroId					INT -- Es el id del Archivo de referencia, o sea, "el id del Informe"
+		
+		,@SwapOrdenDelRegistroId		INT -- Es el id del Archivo que queremos "Subir" 1 nivel.
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT		
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE --@Tabla VARCHAR(80) = 'Archivos' Comentada por que es un parámetro que pasa
+			@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Las 2 validaciones siguientes no se hacen contra la tabla 'Archivos' sinó contra la del registro relacionado, que pertenece a la tabla @Tabla
+		
+		DECLARE @id INT = @RegistroId
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN (En este caso contra la tabla del @RegistroId
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		--DECLARE @TablaDelArchivo VARCHAR(80) = @Tabla -- En @TablaDelArchivo guardo la tabla del registro, ya que unas lineas más adelante seteo a @Tabla = 'Archivo' para compatibilidad de funcionalidades
+		--SET @Tabla = 'Archivos' -- Hago esto para mantener compatibilidad con las funciones genericas q se utilizan a continuación con @Tabla.
+		-- Para descomentar las 2 lineas anteriores, 1ero hay q corregir que @Tabla usa la funciona a continuación.
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @TablaId INT, @ValorDeOrdenInicial INT, @ValorDeOrdenFinal INT, @SwapOrdenDelRegistroId2 INT, @ContextoId INT
+				
+				SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = @Tabla)
+				
+				SELECT @ValorDeOrdenInicial = Orden, @ContextoId = ContextoId, @TablaId = TablaId FROM Archivos WHERE id = @SwapOrdenDelRegistroId
+				
+				SET @ValorDeOrdenFinal = (SELECT MAX(Orden) FROM Archivos WHERE 
+											RegistroId = @RegistroId AND ContextoId = @ContextoId AND TablaId = @TablaId
+											AND (Orden < @ValorDeOrdenInicial)) -- o sea, el inmediato anterior
+											--GROUP BY id, Orden
+				
+				-- Ahora busco el id del orden q encontramos recien (cuandolo hacia en el mismo SELECT, con group by me daba error en el resultado).
+				SET @SwapOrdenDelRegistroId2 = (SELECT id FROM Archivos WHERE 
+					RegistroId = @RegistroId AND ContextoId = @ContextoId AND TablaId = @TablaId
+					AND Orden = @ValorDeOrdenFinal)
+				 	
+				IF (@SwapOrdenDelRegistroId2 IS NULL)
+					BEGIN
+						SET @sResSQL = 'Se produjo un error, no existe un Archivo de orden superior.'
+					END
+				ELSE
+					BEGIN
+						UPDATE Archivos SET Orden = @ValorDeOrdenInicial FROM Archivos WHERE id = @SwapOrdenDelRegistroId2 -- Seteo Al otro
+						
+						UPDATE Archivos SET Orden = @ValorDeOrdenFinal FROM Archivos WHERE id = @SwapOrdenDelRegistroId -- Seteo Al Reg en cuestión.
+						
+						-- No registramos este log, es un cambio sin importancia
+						--SELECT @Tabla = 'Archivos' -- El registro va con esta tabla.
+						---- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+						--EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+						--	,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+						--	,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+					END
+			END
+					
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Archivos__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Archivos__Update_by_@id
+GO
+CREATE PROCEDURE usp_Archivos__Update_by_@id
+		@id									INT	
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		--,ContextoId						INT	
+		--,@Tabla								VARCHAR(100)		
+		--,@RegistroId						INT	
+		--,@NombreFisicoCompleto				VARCHAR(100)
+		,@NombreAMostrar					VARCHAR(100)
+		--,ExtensionDeArchivoId				INT		
+		--,Orden							INT	-- Si un registro tiene + de 1 Archivo --> Este campo los "ordena".
+		,@Observaciones						VARCHAR(1000)
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = (SELECT Nombre FROM Tablas T INNER JOIN Archivos A ON T.id = A.TablaId WHERE A.id = @id) -- No la indicamos directamente, si no que se busca del registro que se pasa.
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Los permisos no se evalúan contra la tabla "Archivos", si no contra la tabla: @Tabla --> Contra el Registro "Padre"
+		DECLARE @RegistroPadreId INT = (SELECT RegistroId FROM Archivos WHERE id = @id)
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @RegistroPadreId, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+		
+		SET @Tabla = 'Archivos' -- Hago esto para mantener compatibilidad con las funciones genericas q se utilizan a continuación con @Tabla.
+		
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Archivos
+				SET
+					NombreAMostrar = @NombreAMostrar	
+					,Observaciones = @Observaciones
+				FROM Archivos
+				WHERE id = @id
+				
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Archivos /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Dispositivos /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Dispositivos__Update_DatosTecnicos') IS NOT NULL) DROP PROCEDURE usp_Dispositivos__Update_DatosTecnicos
+GO
+CREATE PROCEDURE usp_Dispositivos__Update_DatosTecnicos
+		@id									INT	
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		--,@AsignadoAUsuarioId				INT
+	    ,@MachineName						VARCHAR(50) -- @Imei
+	    ,@OSVersion							VARCHAR(100)
+	    --,@UserMachineName					VARCHAR(50)
+	    --,@ClavePrivada					VARCHAR(40)
+	    --,@ClavePrivadaEntregada			BIT
+	    --,@ClavePrivadaFechaEntrega		DATETIME	
+	    --,@Observaciones					VARCHAR(1000)
+	    
+	    ,@sResSQL							VARCHAR(1000)			OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Dispositivos'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Dispositivos
+				SET
+					MachineName = @MachineName	
+					,OSVersion = @OSVersion
+					--,ClavePrivada = @ClavePrivada VER SI SE PUEDE MODIFICAR DESDE EL SITIO
+				FROM Dispositivos
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Dispositivos__Update_by_@Imei') IS NOT NULL) DROP PROCEDURE usp_Dispositivos__Update_by_@Imei
+GO
+CREATE PROCEDURE usp_Dispositivos__Update_by_@Imei				
+		@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		,@Token								VARCHAR(40) = ''				
+	    
+		,@Imei							VARCHAR(50) --MachineName 
+		
+		,@sResSQL						VARCHAR(1000)			OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Dispositivos'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		--EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		--IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+		--	BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		--END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @id INT
+				
+				UPDATE Dispositivos
+				SET @id = Id	
+					 ,ClavePrivadaEntregada = 1
+					 ,ClavePrivadaFechaEntrega = @FechaDeEjecucion
+				FROM Dispositivos
+				WHERE MachineName = @Imei
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Dispositivos /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Importaciones /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Importaciones__Insert') IS NOT NULL) DROP PROCEDURE usp_Importaciones__Insert
+GO
+CREATE PROCEDURE usp_Importaciones__Insert
+		@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token							VARCHAR(40) = ''
+				
+		,@TablaDestino					VARCHAR(80)
+		,@Observaciones					VARCHAR(1000) = ''
+		
+	    ,@sResSQL						VARCHAR(1000)	OUTPUT
+	    ,@id							INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Importaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @TablaDestino, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @TablaDestino, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				DECLARE @Numero INT = (SELECT COALESCE(MAX(Numero), 0) + 1 FROM Importaciones WHERE ContextoId = @ContextoId)
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @TablaDestino)
+				
+				INSERT INTO Importaciones
+				(
+					ContextoId
+					,UsuarioQueImportaId
+					,TablaId
+					,Numero
+					,Fecha
+					,Observaciones
+				)
+				VALUES
+				(
+					@ContextoId
+					,@UsuarioQueEjecutaId
+					,@TablaId
+					,@Numero
+					,@FechaDeEjecucion
+					,@Observaciones
+				)
+			
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Importaciones__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Importaciones__Update_by_@id
+GO
+CREATE PROCEDURE usp_Importaciones__Update_by_@id
+		@id								INT	
+		
+		,@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@ObservacionesPosteriores		VARCHAR(1000) = ''
+		
+	    ,@sResSQL						VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Importaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Importaciones
+				SET
+					ObservacionesPosteriores = @ObservacionesPosteriores
+				FROM Importaciones
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Importaciones /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: LogLoginsDeDispositivos_Rechazados /ABMs/ - INICIO 
+IF (OBJECT_ID('usp_LogLoginsDeDispositivosRechazados__Insert') IS NOT NULL) DROP PROCEDURE usp_LogLoginsDeDispositivosRechazados__Insert
+GO
+CREATE PROCEDURE usp_LogLoginsDeDispositivosRechazados__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+	    
+	    ,@JSON								VARCHAR(5000)
+		,@UsuarioIngresado					VARCHAR(81)
+	    ,@MachineName						VARCHAR(50)	
+		,@MotivoDeRechazo					VARCHAR(1000)
+		
+	    ,@sResSQL							VARCHAR(1000)			OUTPUT
+	    ,@id								INT						OUTPUT
+	AS
+	BEGIN
+		SET @sResSQL = ''
+		
+		SET NOCOUNT ON
+		INSERT INTO LogLoginsDeDispositivosRechazados
+		(
+			JSON
+			,UsuarioIngresado
+			,MachineName
+			,MotivoDeRechazo		
+			,FechaDeEjecucion							
+		)
+		VALUES
+		(
+			 @JSON
+			,@UsuarioIngresado
+			,@MachineName
+			,@MotivoDeRechazo		
+			,@FechaDeEjecucion		
+		)
+		--EXEC	@sResSQL = [dbo].ufc_ResultadoOperacion__Insert  @RowCount = @@ROWCOUNT
+	END
+GO
+-- SP-TABLA: LogLoginsDeDispositivos_Rechazados /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Notificaciones /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Notificaciones__Insert') IS NOT NULL) DROP PROCEDURE usp_Notificaciones__Insert
+GO
+CREATE PROCEDURE usp_Notificaciones__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@Fecha								DATETIME			
+		,@UsuarioDestinatarioId				INT					
+		,@TablaDeReferencia					VARCHAR(80) -- Luego en la BD lleva TablaId
+		,@RegistroId						INT					
+		,@IconoCSSId						INT
+		,@Cuerpo							VARCHAR(1000)		
+		,@Activo                            BIT = '1'
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Notificaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el Insert se inserta el Contexto del Usuario, realizando la validación 1 implicitamente.
+ 
+		-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina) registros de esta tabla (@Tabla).
+		--EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		
+		SET @sResSQL = '' --NO VERIFICO PERMISOS PARA NOTIFICACIONES
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT
+				EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+	 
+				DECLARE @Numero INT
+				EXEC @Numero = ufc_ValorSiguiente @Tabla = @Tabla, @Campo = 'Numero' ,@ContextoId = @ContextoId
+	 
+				DECLARE @TablaId INT = (SELECT id FROM Tablas WHERE Nombre = @TablaDeReferencia)
+	
+				SET NOCOUNT ON
+				INSERT INTO Notificaciones
+				(
+					ContextoId
+					,Fecha
+					,Numero
+					,UsuarioDestinatarioId
+					,TablaId
+					,RegistroId
+					,IconoCSSId
+					,Cuerpo
+					,Activo
+				)
+				VALUES
+				(
+					@ContextoId
+					,@Fecha
+					,@Numero
+					,@UsuarioDestinatarioId
+					,@TablaId
+					,@RegistroId
+					,@IconoCSSId
+					,@Cuerpo
+					,@Activo
+				)
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, so OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Notificaciones__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Notificaciones__Update_by_@id
+GO
+CREATE PROCEDURE usp_Notificaciones__Update_by_@id
+		@id									INT	
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@Fecha								DATETIME
+		,@UsuarioDestinatarioId				INT					
+		,@TablaId							INT					
+		,@RegistroId						INT					
+		,@Cuerpo							VARCHAR(1000)		
+		,@IconoCSSId						INT		
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Notificaciones'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+		
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Notificaciones
+				SET
+					Fecha = @Fecha
+					,UsuarioDestinatarioId = @UsuarioDestinatarioId
+					,TablaId = @TablaId
+					,RegistroId = @RegistroId
+					,Cuerpo = @Cuerpo
+					,IconoCSSId = @IconoCSSId
+					,Leida = '1'
+				FROM Notificaciones
+				WHERE id = @id
+				
+				-- Revisamos el resultado, so OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Notificaciones /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: RecorridosDeDispositivos /ABMs/ - INICIO
+IF (OBJECT_ID('usp_RecorridosDeDispositivos__Insert') IS NOT NULL) DROP PROCEDURE usp_RecorridosDeDispositivos__Insert
+GO
+CREATE PROCEDURE usp_RecorridosDeDispositivos__Insert
+		@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token							VARCHAR(40) = ''
+					
+		,@UsuarioId						INT
+		,@GpsLatitud					VARCHAR(40)
+		,@GpsLongitud					VARCHAR(40) 
+		,@RedLatitud 					VARCHAR(40)
+		,@RedLongitud					VARCHAR(40)
+		,@DispositivoId					INT
+		
+		,@sResSQL						VARCHAR(1000)			OUTPUT
+		,@id							INT						OUTPUT
+	AS
+	BEGIN
+		SET @sResSQL = ''
+		DECLARE @Usuario		VARCHAR(40) 
+			,@Latitud				VARCHAR(40) = ''
+			,@Longitud				VARCHAR(40) = ''
+		
+		SELECT @Usuario = Nombre + ' ' + Apellido  FROM Usuarios WHERE Usuarios.id = @UsuarioId 
+			SET @Latitud = ''
+			SET @Longitud = ''
+		IF @GpsLatitud <> '' and @GpsLongitud <> ''
+	 		BEGIN
+				SET @Latitud = @GpsLatitud
+				SET @Longitud = @GpsLongitud		
+			END
+		ELSE
+			IF  @RedLatitud <> '' and @RedLongitud <> ''
+	 			BEGIN
+					SET @Latitud = @RedLatitud
+					SET @Longitud = @RedLongitud
+				END
+
+		
+		INSERT INTO RecorridosDeDispositivos
+		(
+			Token	
+			,UsuarioId	
+			,Usuario		
+			,Latitud		
+			,Longitud		
+			,DispositivoId 
+			,FechaDeEjecucion
+		)
+		VALUES
+		(
+			@Token		
+			,@UsuarioId	
+			,@Usuario		
+			,@Latitud		
+			,@Longitud		
+			,@DispositivoId 
+			,@FechaDeEjecucion
+		)
+		
+		SET @id = SCOPE_IDENTITY()
+		
+		--EXEC	@sResSQL = [dbo].ufc_ResultadoOperacion__Insert  @RowCount = @@ROWCOUNT
+				
+			--ES REDUNDANTE HACER UN LOG			
+			--IF @sResSQL = ''
+			--	BEGIN	-- Registro el Log
+			--		EXEC usp_LogRegistros___insert @UsuarioQueEjecuta_Id = @Usuario_Id, @Tabla = 'RecorridosDeDispositivos'
+ 			--				, @Registro_Id = @id, @TipoDe_LogRegistro_Id = '1', @FechaDeEjecucion = @FechaDeEjecucion,  @ObsLog = @ObsLog
+ 			--		END	
+	END 
+GO
+-- SP-TABLA: RecorridosDeDispositivos /ABMs/ - FIN
+ 
+ 
+ 
+
+-- SP-TABLA: usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId /ABMs/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId') IS NOT NULL) DROP PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId
+GO
+CREATE PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId
+	-- Validaciones:
+		-- 
+	-------------
+	-- Acotaciones:
+		-- Hace el Swap respecto a la asignación del @TipoDeContactoId al Contexto. Si existe --> lo elimina, si no existe --> lo inserta.
+	-------------
+	--@id                                            INT
+ 
+	@UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@Token                                         VARCHAR(40) = ''
+ 
+	,@TipoDeContactoId                              INT
+ 
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_TiposDeContactos_A_Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Update'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	DECLARE @id INT
+	-- Directamente no tiene sentido mirar el COntexto del Usuario, ya que en realidad lo busco, para utilizarlo.
+	--EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	--IF @sResSQL = ''
+	--	BEGIN
+			EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+	--	END
+ 
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+			
+			SET @id = (SELECT id FROM RelAsig_TiposDeContactos_A_Contextos WHERE ContextoId = @ContextoId AND TipoDeContactoId = @TipoDeContactoId)
+			
+			IF @id IS NULL
+				BEGIN -- NO EXIXTE --> LO INSERTO
+					INSERT INTO RelAsig_TiposDeContactos_A_Contextos
+					(
+						ContextoId	
+						,TipoDeContactoId
+					)
+					VALUES
+					(
+						@ContextoId		
+						,@TipoDeContactoId
+					)
+					
+					SET @id = SCOPE_IDENTITY()
+					
+					-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+					EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+						,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+						,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+				END
+			ELSE
+				BEGIN -- EXIXTE --> LO ELIMINO
+					DELETE FROM RelAsig_TiposDeContactos_A_Contextos WHERE id = @id
+					
+					-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+					EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+						,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+						,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+				END
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: usp_RelAsig_TiposDeContactos_A_Contextos__Swap@TipoDeContactoId /ABMs/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: ReservasDeRecursos /ABMs/ - INICIO
+IF (OBJECT_ID('usp_ReservasDeRecursos__Insert') IS NOT NULL) DROP PROCEDURE usp_ReservasDeRecursos__Insert
+GO
+CREATE PROCEDURE usp_ReservasDeRecursos__Insert
+	-- Validaciones:
+		-- 1) Solo se incluirán @ObservacionesDelAprobador si el que inserta es el mismo que aprueba (ie @ReservaAprobada = '1')
+		-- 2) IF @ReservaAprobada = '1' --> Verificamos que el usuario tiene permisos de Aprobar la reserva de ese Recurso Id y además: SET @FechaDeAprobacion = @FechaDeEjecucion // ELSE SET @FechaDeAprobacion = NULL & SET @ObservacionesDelAprobador = ''
+		-- 3) Que no pise otras fechas de reserva para el mismo RecursoId.
+	-------------
+	-- Acotaciones:
+		-- A @UsuarioOriginanteId Se le impacta el @UsuarioQueEjecutaId
+		-- A @FechaDePedido Se le impacta la @FechaDeEjecucion
+		-- A @FechaDeAprobacion Si es una solicitud se ingresa como NULL
+	-------------
+	 @UsuarioQueEjecutaId                                      INT
+	,@FechaDeEjecucion                                         DATETIME
+	,@Token                                                    VARCHAR(40) = ''
+ 
+	--,@UsuarioOriginanteId                                      INT // Se le impacta el @UsuarioQueEjecutaId
+	,@UsuarioDestinatarioId                                    INT
+	,@RecursoId                                                INT
+	--,@FechaDePedido                                            DATETIME // Se le impacta la @FechaDeEjecucion
+	--,@FechaDeAprobacion                                        DATETIME = NULL -- Si es una solicitud se ingresa como NULL
+	,@ReservaAprobada										   BIT = '0' -- Es calculado, pero lo usamos para setear la @FechaDeAprobacion.
+	,@FechaDeInicio                                            DATETIME
+	,@FechaLimite                                              DATETIME
+	,@ObservacionesDelOriginante							   VARCHAR(1000)
+	,@ObservacionesDelAprobador								   VARCHAR(1000) = '' -- Solo se incluirán si el que inserta es el mismo que aprueba (ie @ReservaAprobada = '1')
+	
+	,@sResSQL                                                  VARCHAR(1000)	OUTPUT
+	,@id                                                       INT		OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ReservasDeRecursos'
+		,@FuncionDePagina VARCHAR(30) = 'Insert'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: NO SE REALIZA, Ya que no hay un registro contra el que validar el Contexto; Pero luego en el Insert se inserta el Contexto del Usuario, realizando la validación 1 implicitamente.
+ 
+	-- Validación 2:[Permisos sobre la tabla]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina) registros de esta tabla (@Tabla).
+	EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+ 
+	IF @sResSQL = ''
+		BEGIN -- Validación de que ese período está libre
+			 EXEC	 usp_ReservasDeRecursos__RecursoDisponible @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+			 			,@RecursoId = @RecursoId
+						,@FechaDeInicio = @FechaDeInicio
+						,@FechaLimite = @FechaLimite
+						,@sResSQL = @sResSQL OUTPUT
+						--,@id = @id // Se incluye solo en un update.
+		END					
+	
+	DECLARE @FechaDeAprobacion DATETIME
+	
+	IF @sResSQL = '' AND @ReservaAprobada = '1' -- Verifico que tiene permisos de Aprobar el recurso
+		BEGIN
+			EXEC	usp_Recursos__EsResponsableDelRecurso @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+						,@RecursoId = @RecursoId
+						,@sResSQL = @sResSQL OUTPUT
+						
+			SET @FechaDeAprobacion = @FechaDeEjecucion
+		END
+	ELSE
+		BEGIN	
+			SET @FechaDeAprobacion = NULL -- Es redundante por que se crea NULL, pero lo dejamos escrito para evitar malos entendidos.
+			SET @ObservacionesDelAprobador = ''  -- Solo se incluirán si el que inserta es el mismo que aprueba (ie @ReservaAprobada = '1')
+		END
+							
+	IF @sResSQL = ''
+		BEGIN 
+			DECLARE @ContextoId	INT
+			EXEC	@ContextoId = [dbo].[ufc_ContextoDelUsuario] @UsuarioId = @UsuarioQueEjecutaId
+		 			
+			DECLARE @Numero INT
+			EXEC @Numero = ufc_ValorSiguiente @Tabla = @Tabla, @Campo = 'Numero' ,@ContextoId = @ContextoId
+ 
+			DECLARE @UsuarioOriginanteId INT = @UsuarioQueEjecutaId
+				,@FechaDePedido DATETIME = @FechaDeEjecucion
+								
+			SET NOCOUNT ON
+			INSERT INTO ReservasDeRecursos
+			(
+				ContextoId
+				,UsuarioOriginanteId
+				,UsuarioDestinatarioId
+				,RecursoId
+				,FechaDePedido
+				,FechaDeAprobacion
+				,FechaDeInicio
+				,FechaLimite
+				,Numero
+				,ObservacionesDelOriginante
+				,ObservacionesDelAprobador
+			)
+			VALUES
+			(
+				@ContextoId
+				,@UsuarioOriginanteId
+				,@UsuarioDestinatarioId
+				,@RecursoId
+				,@FechaDePedido
+				,@FechaDeAprobacion
+				,@FechaDeInicio
+				,@FechaLimite
+				,@Numero
+				,@ObservacionesDelOriginante
+				,@ObservacionesDelAprobador
+			)
+			SET @id = SCOPE_IDENTITY()
+ 
+			-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+			EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+		END
+END TRY
+BEGIN CATCH
+	DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+	EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+		,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+		,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+END CATCH
+GO
+ 
+ 
+ 
+ 
+IF (OBJECT_ID('usp_ReservasDeRecursos__Update_Aprobacion') IS NOT NULL) DROP PROCEDURE usp_ReservasDeRecursos__Update_Aprobacion
+GO
+CREATE PROCEDURE usp_ReservasDeRecursos__Update_Aprobacion
+	-- Validaciones:
+		-- 1) IF @ReservaAprobada_EstadoActual <> @ReservaAprobada (Cambió) --> SET @FechaDeAprobacion = CASE WHEN @ReservaAprobada = '1' THEN @FechaDeEjecucion ELSE NULL END
+		-- 2) Que no pise otras fechas de reserva para el mismo RecursoId.
+	-------------
+	-- Acotaciones:
+		-- Una reserva no aprobada puede estar ocupando un período no permitido. Esto saltará cuando la quiera aprobar.
+		-- @FechaDeAprobacion  Se modifica internamente, solo si se está aprobando o desaprobando, por medio de SET @FechaDeEjecucion si cambió @ReservaAprobada
+	-------------
+	 @id                                                       INT
+ 
+	,@UsuarioQueEjecutaId                                      INT
+	,@FechaDeEjecucion                                         DATETIME
+	,@Token                                                    VARCHAR(40) = ''
+ 
+	,@ReservaAprobada										   BIT -- Es calculado, pero lo usamos para setear la @FechaDeAprobacion.
+	,@ObservacionesDelAprobador								   VARCHAR(1000)	
+	
+	,@sResSQL                                                  VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ReservasDeRecursos'
+		,@FuncionDePagina VARCHAR(30) = 'Update'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN
+			EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		END
+ 
+	DECLARE @RecursoId INT
+		,@FechaDeInicio  DATETIME
+		,@FechaLimite    DATETIME
+		,@ReservaAprobada_EstadoActual BIT
+		,@FechaDeAprobacion DATETIME
+	
+	SELECT @RecursoId = RecursoId, @FechaDeInicio = FechaDeInicio, @FechaLimite = FechaLimite, @ReservaAprobada_EstadoActual = ReservaAprobada FROM ReservasDeRecursos WHERE id = @id
+	
+	IF @sResSQL = '' AND @ReservaAprobada_EstadoActual = @ReservaAprobada -- NO Cambió
+		BEGIN	
+			SET @sResSQL = 'No se puede contretar la acción. La reserva ya se encuentra en el estado de aprobación indicado.'
+		END
+						
+	IF @sResSQL = '' AND @RecursoId IS NULL
+		BEGIN
+			SET @sResSQL = 'No se puede contretar la acción. No existe el registro indicado.'
+		END	
+					
+	IF @sResSQL = '' -- Verifico que tiene permisos de Aprobar/Desaprobar/Cambiar la reserva del recurso
+		BEGIN
+			EXEC	 usp_Recursos__EsResponsableDelRecurso @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+						,@RecursoId = @RecursoId
+						,@sResSQL = @sResSQL OUTPUT
+		END
+		
+	IF @sResSQL = '' AND @ReservaAprobada = '1' -- Reviso si está libre:
+		BEGIN
+			 EXEC	usp_ReservasDeRecursos__RecursoDisponible @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+					,@RecursoId = @RecursoId
+					,@FechaDeInicio = @FechaDeInicio
+					,@FechaLimite = @FechaLimite
+					,@sResSQL = @sResSQL OUTPUT
+					,@id = @id -- // Se incluye solo en un update.
+					
+			SET @FechaDeAprobacion = @FechaDeEjecucion
+		END
+	ELSE
+		BEGIN	-- Está "borrando" la aprobación.
+			SET @FechaDeAprobacion = NULL -- Es redundante por que se crea NULL, pero lo dejamos escrito para evitar malos entendidos.
+		END
+		
+	IF @sResSQL = ''
+		BEGIN 	
+			UPDATE ReservasDeRecursos
+			SET
+				FechaDeAprobacion = @FechaDeAprobacion
+				,ObservacionesDelAprobador = @ObservacionesDelAprobador
+	
+			FROM ReservasDeRecursos
+			WHERE id = @id
+ 
+			-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+			EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+		END
+END TRY
+BEGIN CATCH
+	DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+	EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+		,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+		,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+END CATCH
+GO
+
+
+
+ 
+IF (OBJECT_ID('usp_ReservasDeRecursos__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_ReservasDeRecursos__Update_by_@id
+GO
+CREATE PROCEDURE usp_ReservasDeRecursos__Update_by_@id
+	-- Validaciones:
+		-- 1) IF @ReservaAprobada_EstadoActual <> @ReservaAprobada (Cambió) --> SET @FechaDeAprobacion = CASE WHEN @ReservaAprobada = '1' THEN @FechaDeEjecucion ELSE NULL END
+		-- 2) Que no pise otras fechas de reserva para el mismo RecursoId.
+	-------------
+	-- Acotaciones:
+		-- Si la reserva se encuentra aprobada no se puede modificar. Si se desea modificarlo --> 1ero hay que desaprobarla.
+		-- @UsuarioOriginanteId No se modifica
+		-- FechaDePedido No se modifica
+		-- @FechaDeAprobacion  Se modifica internamente, solo si se está aprobando o desaprobando, por medio de SET @FechaDeEjecucion si cambió @ReservaAprobada
+	-------------
+	 @id                                                       INT
+ 
+	,@UsuarioQueEjecutaId                                      INT
+	,@FechaDeEjecucion                                         DATETIME
+	,@Token                                                    VARCHAR(40) = ''
+ 
+	--,@UsuarioOriginanteId                                      INT // No se modifica
+	,@UsuarioDestinatarioId                                    INT
+	--,@RecursoId                                                INT // No se modifica
+	--,@FechaDePedido                                            DATETIME // No se modifica
+	--,@FechaDeAprobacion                                        DATETIME // Se modifica internamente, solo si se está aprobando o desaprobando, por medio de SET @FechaDeEjecucion si cambió @ReservaAprobada
+	--,@ReservaAprobada										   BIT -- Es calculado, pero lo usamos para setear la @FechaDeAprobacion.
+	,@FechaDeInicio                                            DATETIME
+	,@FechaLimite                                              DATETIME
+	,@ObservacionesDelOriginante							   VARCHAR(1000)
+	,@ObservacionesDelAprobador								   VARCHAR(1000)	
+	
+	,@sResSQL                                                  VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ReservasDeRecursos'
+		,@FuncionDePagina VARCHAR(30) = 'Update'
+		,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN
+			EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+		END
+ 
+	DECLARE @RecursoId INT
+		,@ReservaAprobada_EstadoActual BIT
+		,@UsuarioOriginanteId INT
+	
+	SELECT @RecursoId = RecursoId, @ReservaAprobada_EstadoActual = ReservaAprobada, @UsuarioOriginanteId = UsuarioOriginanteId FROM ReservasDeRecursos WHERE id = @id
+	
+	IF @sResSQL = '' AND @RecursoId IS NULL
+		BEGIN
+			SET @sResSQL = 'No se puede contretar la acción. No existe el registro indicado.'
+		END	
+	
+	IF @sResSQL = '' AND @ReservaAprobada_EstadoActual = '1'
+		BEGIN	
+			SET @sResSQL = 'No se puede contretar la acción. La reserva ya se encuentra aprobada.'
+		END
+				
+	IF @sResSQL = '' AND @UsuarioQueEjecutaId = @UsuarioOriginanteId -- Es el usuario que solicitó:
+		BEGIN
+			SET @ObservacionesDelAprobador = (SELECT ObservacionesDelAprobador FROM ReservasDeRecursos WHERE id = @id) -- GUARDO LAS DEL APROBADOR
+		END				
+	ELSE
+		BEGIN -- VERIFICO QUE TIENE PERMISO:
+			SET @ObservacionesDelOriginante	= (SELECT ObservacionesDelOriginante FROM ReservasDeRecursos WHERE id = @id) -- GUARDO LAS DEL ORIGINANDTE
+			
+			EXEC	@sResSQL = usp_Recursos__EsResponsableDelRecurso @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+						,@RecursoId = @RecursoId
+		END
+						
+	IF @sResSQL = '' -- Reerva no Aprobada:
+		BEGIN 
+			UPDATE ReservasDeRecursos
+			SET
+				--UsuarioOriginanteId = @UsuarioOriginanteId
+				UsuarioDestinatarioId = @UsuarioDestinatarioId
+				--,RecursoId = @RecursoId
+				--,FechaDePedido = @FechaDePedido
+				--,FechaDeAprobacion = @FechaDeAprobacion
+				,FechaDeInicio = @FechaDeInicio
+				,FechaLimite = @FechaLimite
+				,ObservacionesDelOriginante	= @ObservacionesDelOriginante
+				,ObservacionesDelAprobador = @ObservacionesDelAprobador
+	
+			FROM ReservasDeRecursos
+			WHERE id = @id
+ 
+			-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+			EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+				,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+				,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+		END
+END TRY
+BEGIN CATCH
+	DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+	EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+		,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+		,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+END CATCH
+GO
+-- SP-TABLA: ReservasDeRecursos /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Soportes /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Soportes__Insert') IS NOT NULL) DROP PROCEDURE usp_Soportes__Insert
+GO
+CREATE PROCEDURE usp_Soportes__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@UsuarioQueCerroId					INT = 1
+		,@UsuarioQueSolicitaId				INT
+		,@FechaDeCierre						DATETIME = NULL
+		,@Texto								VARCHAR(MAX)	
+		,@Observaciones						VARCHAR(MAX)
+		,@Cerrado							BIT
+		,@PrioridadDeSoporteId				INT
+		,@EstadoDeSoporteId					INT = 1 -- Es obligatorio q sea 1, pero por compatibilidad del modelo .net lo ponemos. Luego lo validamos.
+		,@ObservacionesPrivadas				VARCHAR(MAX) = ''
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		
+		--Validamos que sea 1 ( -- Es obligatorio q sea 1, pero por compatibilidad del modelo .net lo ponemos en el Insert. Luego lo validamos.)
+		IF @EstadoDeSoporteId <> 1
+			BEGIN
+				SET @sResSQL = 'Estado de soporte inválido, debe ser igual a 1'
+			END
+		
+		IF @sResSQL = ''  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @NumeroSiguiente INT
+				EXEC @NumeroSiguiente = ufc_ValorSiguiente @Tabla = 'Soportes', @Campo = 'Numero'	
+				
+				DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				
+				SET NOCOUNT ON
+				INSERT INTO Soportes
+				(
+					ContextoId
+					,FechaDeEjecucion
+					,UsuarioQueCerroId
+					,UsuarioQueSolicitaId
+					,FechaDeCierre
+					,Numero
+					,Texto
+					,PrioridadDeSoporteId
+					,EstadoDeSoportesId
+				)
+				VALUES
+				(
+					@ContextoId
+					,@FechaDeEjecucion
+					,@UsuarioQueCerroId
+					,@UsuarioQueSolicitaId
+					,@FechaDeCierre
+					,@NumeroSiguiente
+					,@Texto
+					,@PrioridadDeSoporteId
+					,@EstadoDeSoporteId
+				)
+				
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+				
+				--Agrego las notificaciones para los MasterAdmins
+				IF @sResSQL = ''
+					BEGIN
+						DECLARE @UsuarioDestinatarioId INT
+							,@NotificacionId INT
+							,@Cuerpo VARCHAR(1000) = (SELECT 'Nuevo pedido de soporte de ' + Apellido + ', ' + Nombre FROM Usuarios WHERE id = @UsuarioQueSolicitaId)
+							,@IconoCSSId INT = COALESCE((SELECT id FROM IconosCSS WHERE Nombre = 'Life Ring Gray'), 1) -- Si no la encuentra id=1 (Default)
+							
+						DECLARE db_cursor CURSOR FOR 
+						SELECT U.id 
+						FROM Usuarios U
+						INNER JOIN RelAsig_RolesDeUsuarios_A_Usuarios REL ON U.id = REL.UsuarioId AND REL.RolDeUsuarioId = 1
+
+						OPEN db_cursor  
+						FETCH NEXT FROM db_cursor INTO @UsuarioDestinatarioId
+
+						WHILE @@FETCH_STATUS = 0  
+							BEGIN  
+								EXEC usp_Notificaciones__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+									,@Fecha = @FechaDeEjecucion ,@UsuarioDestinatarioId = @UsuarioDestinatarioId, @TablaDeReferencia = @Tabla, @RegistroId = @id
+									,@Cuerpo = @Cuerpo, @IconoCSSId = @IconoCSSId, @sResSQL = @sResSQL OUTPUT, @id = @NotificacionId OUTPUT
+				
+								FETCH NEXT FROM db_cursor INTO @UsuarioDestinatarioId 
+							END 
+
+						CLOSE db_cursor  
+						DEALLOCATE db_cursor 
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Soportes__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Soportes__Update_by_@id
+GO
+CREATE PROCEDURE usp_Soportes__Update_by_@id
+		@id									INT	
+		
+		,@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@UsuarioQueCerroId					INT = 0
+		,@UsuarioQueSolicitaId				INT
+		,@FechaDeCierre						DATETIME = 0
+		,@Texto								VARCHAR(max)	
+		,@Observaciones						VARCHAR(MAX)
+		,@Cerrado							BIT
+		,@PrioridadDeSoporteId				INT
+		,@EstadoDeSoporteId					INT
+		,@ObservacionesPrivadas				VARCHAR(max)	= ''
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT			
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+			,@NotificacionId INT
+			,@UsuarioDestinatarioId INT -- De la Notificación / Correos.
+			,@Cuerpo VARCHAR(1000) -- Para el cuerpo de la notificación.
+			
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @RegistrosAfectados INT, @NumeroDeError2 INT -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+					,@CierraSoporte BIT = (SELECT CierraSoporte FROM EstadosDeSoportes WHERE id = @EstadoDeSoporteId)
+					,@IconoCSSId INT = COALESCE((SELECT id FROM IconosCSS WHERE Nombre = 'Life Ring Gray'), 1) -- Si no la encuentra id=1 (Default)
+				
+				IF @CierraSoporte = '1'  
+					BEGIN
+						IF (SELECT Cerrado FROM Soportes Where id = @id) = 0
+							BEGIN -- Si estaba Abierto y Ahora viene Cerrado --> impacto quien lo realizó
+								UPDATE Soportes
+								SET
+									UsuarioQueCerroId = @UsuarioQueEjecutaId
+									,FechaDeCierre = @FechaDeEjecucion
+									,EstadoDeSoportesId = @EstadoDeSoporteId
+									,PrioridadDeSoporteId = @PrioridadDeSoporteId
+									,Observaciones = @Observaciones
+									,ObservacionesPrivadas = @ObservacionesPrivadas
+									,Cerrado = '1'
+								FROM Soportes
+								WHERE id = @id
+								
+								SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+								
+								--Agrego notificacion de cerrado para el usuario que solicitó
+								SET @Cuerpo = 'Su pedido de soporte ha sido cerrado.'
+								SELECT @UsuarioDestinatarioId = UsuarioQueSolicitaId FROM Soportes WHERE id = @Id
+									
+								EXEC usp_Notificaciones__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+									,@Fecha = @FechaDeEjecucion ,@UsuarioDestinatarioId = @UsuarioDestinatarioId, @TablaDeReferencia = @Tabla, @RegistroId = @id
+									,@Cuerpo = @Cuerpo, @IconoCSSId = @IconoCSSId, @sResSQL = @sResSQL OUTPUT, @id = @NotificacionId OUTPUT
+							END
+						ELSE
+							BEGIN -- YA ESTABA CERRADO, LO ÚNICO ACTUALIZABLE SON LAS OBS PRIVADAS
+								UPDATE Soportes
+								SET
+									ObservacionesPrivadas = @ObservacionesPrivadas
+								FROM Soportes
+								WHERE id = @id
+								
+								SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+							END
+					END
+				ELSE
+					IF (SELECT Cerrado FROM Soportes Where id = @id) = 0
+						BEGIN -- SIGUE ABIERTO
+							IF ((SELECT EstadoDeSoportesId FROM Soportes WHERE id = @id) <> @EstadoDeSoporteId) --CAMBIO EL ESTADO DE SOPORTE
+								BEGIN
+									--Agrego notificacion de 'en revisión' para el usuario que solicitó
+									SELECT @Cuerpo = 'Su pedido de soporte cambió de estado a: ' + Nombre FROM EstadosDeSoportes WHERE id = @EstadoDeSoporteId
+									SELECT @UsuarioDestinatarioId = UsuarioQueSolicitaId FROM Soportes WHERE id = @Id
+									
+									EXEC usp_Notificaciones__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+										,@Fecha = @FechaDeEjecucion ,@UsuarioDestinatarioId = @UsuarioDestinatarioId, @TablaDeReferencia = @Tabla, @RegistroId = @id
+										,@Cuerpo = @Cuerpo, @IconoCSSId = @IconoCSSId, @sResSQL = @sResSQL OUTPUT, @id = @NotificacionId OUTPUT
+								END
+						
+							UPDATE Soportes
+							SET
+								EstadoDeSoportesId = @EstadoDeSoporteId
+								,PrioridadDeSoporteId = @PrioridadDeSoporteId
+								,Observaciones = @Observaciones
+								,ObservacionesPrivadas = @ObservacionesPrivadas
+							FROM Soportes
+							WHERE id = @id
+							
+							SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+						END
+					ELSE
+						BEGIN -- YA ESTABA CERRADO, LO ÚNICO ACTUALIZABLE SON LAS OBS PRIVADAS
+							UPDATE Soportes
+							SET
+								ObservacionesPrivadas = @ObservacionesPrivadas
+							FROM Soportes
+							WHERE id = @id
+							
+							SELECT @RegistrosAfectados = @@ROWCOUNT, @NumeroDeError2 = @@ERROR -- POR EXCEPCION LAS DECLARAMOS ACÁ, POR Q LUEGO VAN EN DISTINTOS begin-end, y SE PIERDE EL VALOR
+						END
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @RegistrosAfectados
+					,@NumeroDeError = @NumeroDeError2, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Soportes__Update_Campos_@PublicacionId_by_@id') IS NOT NULL) DROP PROCEDURE usp_Soportes__Update_Campos_@PublicacionId_by_@id
+GO
+CREATE PROCEDURE usp_Soportes__Update_Campos_@PublicacionId_by_@id
+		@id								INT		
+		
+		,@PublicacionId					INT
+		
+		,@UsuarioQueEjecutaId			INT						
+		,@FechaDeEjecucion				DATETIME				
+		,@Token								VARCHAR(40) = ''	
+		
+		,@sResSQL						VARCHAR(1000)	OUTPUT						
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Soportes'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				IF @PublicacionId = -1
+					BEGIN
+						SET @PublicacionId = NULL
+					END
+			
+				UPDATE Soportes
+				SET PublicacionId = @PublicacionId
+				FROM Soportes
+				WHERE id = @id
+
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Soportes /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Tareas /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Tareas__Insert') IS NOT NULL) DROP PROCEDURE usp_Tareas__Insert
+GO
+CREATE PROCEDURE usp_Tareas__Insert
+		@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token								VARCHAR(40) = ''
+				
+		,@UsuarioOriginanteId			INT -- El que "pide" la tarea, que puede ser distinto de quien la carga.
+		,@UsuarioDestinatarioId			INT -- A quién se le asigna la tarea para que la realice.
+		,@FechaDeInicio					DATE -- Puede ser que la cargue con una fecha posterior de inicio.
+		,@FechaLimite					DATE -- Es la fecha en la que espera que esté realizada la tarea. No implica ninguna otra acción.
+		--,@Numero
+		,@TipoDeTareaId					INT -- Es como "Categorizar" o "Clasificar" a la tarea.
+		,@EstadoDeTareaId				INT = 1 -- Es obligatorio q sea 1, pero por compatibilidad del modelo .net lo ponemos. Luego lo validamos.
+		,@Titulo						VARCHAR(100)
+		,@ImportanciaDeTareaId			INT	-- Baja, Media, Alta
+		,@TablaDeReferencia				VARCHAR(80) = '' -- Usa TablaId, pero adentro la busco; id=1 cuando es "sin tabla".	La tarea puede estar relacionada con un registros particular de cualquier tabla.
+		,@RegistroId					INT	= NULL -- No es FK. La tarea puede estar relacionada con un registros particular de cualquier tabla.
+		,@Observaciones					VARCHAR(2000)
+		
+		,@EnviarCorreo					BIT	-- No pertenece a la tabla, indica si se genera un registro en EnviosDeCorreos
+		
+	    ,@sResSQL						VARCHAR(1000)	OUTPUT
+	    ,@id							INT		OUTPUT
+	AS
+	BEGIN TRY
+	BEGIN TRAN
+		DECLARE @Tabla VARCHAR(80) = 'Tareas'
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		--Validamos que sea 1 ( -- Es obligatorio q sea 1, pero por compatibilidad del modelo .net lo ponemos en el Insert. Luego lo validamos.)
+		IF (@EstadoDeTareaId <> 1)
+			BEGIN
+				SET @sResSQL = 'Estado De Tarea inválido, debe ser igual a 1'
+			END
+		
+		IF @sResSQL = ''
+			BEGIN
+				DECLARE @ContextoId	INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioQueEjecutaId)
+				DECLARE @Numero INT = (SELECT COALESCE(MAX(Numero), 0) + 1 FROM Tareas WHERE ContextoId = @ContextoId)
+				DECLARE @TablaId INT = COALESCE((SELECT id FROM Tablas WHERE Nombre = @TablaDeReferencia), 1) -- Si no la encuentra id=1
+			
+				INSERT INTO Tareas
+				(
+					ContextoId
+					,UsuarioOriginanteId
+					,UsuarioDestinatarioId
+					,FechaDeInicio
+					,FechaLimite
+					,Numero
+					,TipoDeTareaId
+					,EstadoDeTareaId
+					,Titulo
+					,ImportanciaDeTareaId
+					,TablaId
+					,RegistroId
+					,Observaciones
+				)
+				VALUES
+				(
+					@ContextoId
+					,@UsuarioOriginanteId
+					,@UsuarioDestinatarioId
+					,@FechaDeInicio
+					,@FechaLimite
+					,@Numero
+					,@TipoDeTareaId
+					,@EstadoDeTareaId
+					,@Titulo
+					,@ImportanciaDeTareaId
+					,@TablaId
+					,@RegistroId
+					,@Observaciones
+				)
+			
+				SET @id = SCOPE_IDENTITY()
+		
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+				
+				--Agrego la notificación para el usuario destinatario de la tarea
+				IF @sResSQL = ''
+					BEGIN
+						DECLARE @NotificacionId INT
+							,@Cuerpo VARCHAR(1000) = ' TEXTO DE LA NOTIFICACIÓN DE LA TAREA' --(SELECT 'Nuevo pedido de soporte de ' + Apellido + ', ' + Nombre FROM Usuarios WHERE id = @UsuarioQueSolicitaId)
+							,@IconoCSSId INT = COALESCE((SELECT id FROM IconosCSS WHERE Nombre = 'Life Ring Gray'), 1) -- Si no la encuentra id=1 (Default)
+							
+							
+						EXEC usp_Notificaciones__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+							,@Fecha = @FechaDeEjecucion ,@UsuarioDestinatarioId = @UsuarioDestinatarioId, @TablaDeReferencia = @Tabla, @RegistroId = @id
+							,@Cuerpo = @Cuerpo, @IconoCSSId = @IconoCSSId, @sResSQL = @sResSQL OUTPUT, @id = @NotificacionId OUTPUT
+					END	
+				
+				--Revisamos si hay q enviar un correo
+				IF (@sResSQL = '' AND @EnviarCorreo = '1')
+					BEGIN	
+						DECLARE @EmailDeDestino	VARCHAR(60) = (SELECT Email FROM Usuarios WHERE id = @UsuarioDestinatarioId)
+						
+						IF @EmailDeDestino <> ''
+							BEGIN
+								DECLARE @Solicitante	VARCHAR(100) = (SELECT Apellido + ', ' + Nombre	FROM Usuarios WHERE id = @UsuarioOriginanteId)
+								DECLARE @Asunto	VARCHAR(200) = (SELECT 'Notificación de tarea nº ' + CAST(@Numero AS VARCHAR(MAX)) + ' solicitada por: ' + @Solicitante)
+									,@Contenido	VARCHAR(MAX) = @Cuerpo
+									,@FechaPactadaDeEnvio	DATETIME = @FechaDeEjecucion
+									
+								SET @TablaId = (SELECT id FROM Tablas WHERE Nombre = @Tabla) -- En este caso es la tabla de "Tareas"
+								
+								EXEC usp_EnviosDeCorreos__Insert @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+									,@UsuarioOriginanteId = @UsuarioOriginanteId, @UsuarioDestinatarioId = @UsuarioDestinatarioId, @TablaId = @TablaId, @RegistroId = @id
+									,@EmailDeDestino = @EmailDeDestino,@Asunto = @Asunto, @Contenido = @Contenido, @FechaPactadaDeEnvio = @FechaPactadaDeEnvio
+									,@sResSQL = @sResSQL OUTPUT, @id = @NotificacionId OUTPUT
+							END
+						ELSE
+							BEGIN
+								SET @sResSQL = 'La tarea y notificación fueron agregadas correctamente, pero no se pudo realizar el envío de correo por que el usuario de destino no tiene uno indicado.'
+							END
+					
+					END
+			END
+					
+		IF @sResSQL = ''
+			BEGIN
+				COMMIT TRAN
+			END
+		ELSE
+			BEGIN
+				RAISERROR (@sResSQL, 16, 1) --> ROLLBACK TRAN // --RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState) // De esta forma, se hace el ROLLBACK, pero queda registrado el error en LogErrores.
+			END		
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN
+		
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+
+
+
+
+IF (OBJECT_ID('usp_Tareas__Update_by_@id') IS NOT NULL) DROP PROCEDURE usp_Tareas__Update_by_@id
+GO
+CREATE PROCEDURE usp_Tareas__Update_by_@id
+		@id								INT	
+		
+		,@UsuarioQueEjecutaId			INT
+		,@FechaDeEjecucion				DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@UsuarioOriginanteId			INT -- El que "pide" la tarea, que puede ser distinto de quien la carga.
+		,@UsuarioDestinatarioId			INT -- A quién se le asigna la tarea para que la realice.
+		,@FechaDeInicio					DATE -- Puede ser que la cargue con una fecha posterior de inicio.
+		,@FechaLimite					DATE -- Es la fecha en la que espera que esté realizada la tarea. No implica ninguna otra acción.
+		--,@Numero
+		,@TipoDeTareaId					INT -- Es como "Categorizar" o "Clasificar" a la tarea.
+		,@EstadoDeTareaId				INT -- Asignada, Iniciada, Finalizada, Aplazada, Esperando Acción, Etc.
+		,@Titulo						VARCHAR(100)
+		,@ImportanciaDeTareaId			INT	-- Baja, Media, Alta
+		,@TablaId						INT	= 1 -- id=1 cuando es "sin tabla".	La tarea puede estar relacionada con un registros particular de cualquier tabla.
+		,@RegistroId					INT	= NULL -- No es FK. La tarea puede estar relacionada con un registros particular de cualquier tabla.
+		,@Observaciones					VARCHAR(2000)
+		
+	    ,@sResSQL						VARCHAR(1000)	OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Tareas'
+			,@FuncionDePagina VARCHAR(30) = 'Update'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				UPDATE Tareas
+				SET
+					UsuarioOriginanteId = @UsuarioOriginanteId
+					,UsuarioDestinatarioId = @UsuarioDestinatarioId
+					,FechaDeInicio = @FechaDeInicio
+					,FechaLimite = @FechaLimite
+					--,@Numero
+					,TipoDeTareaId = @TipoDeTareaId
+					,EstadoDeTareaId = @EstadoDeTareaId
+					,Titulo = @Titulo
+					,ImportanciaDeTareaId = @ImportanciaDeTareaId
+					--,@TablaId
+					--,@RegistroId
+					,Observaciones = @Observaciones
+				FROM Tareas
+				WHERE id = @id
+
+				-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+				EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+					,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+					,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Tareas /ABMs/ - FIN
+
+
+
+
+-- SP-TABLA: Ubicaciones /ABMs/ - INICIO
+IF (OBJECT_ID('usp_Ubicaciones__Insert') IS NOT NULL) DROP PROCEDURE usp_Ubicaciones__Insert
+GO
+CREATE PROCEDURE usp_Ubicaciones__Insert
+		@UsuarioQueEjecutaId				INT
+		,@FechaDeEjecucion					DATETIME
+		,@Token								VARCHAR(40) = ''
+		
+		,@Nombre							VARCHAR(150)
+		,@Observaciones						VARCHAR(1000)
+		,@UbicacionAbsoluta					BIT = 1
+		
+		,@sResSQL							VARCHAR(1000)	OUTPUT
+		,@id								INT		OUTPUT
+	AS
+	BEGIN TRY
+		DECLARE @Tabla VARCHAR(80) = 'Ubicaciones' 
+			,@FuncionDePagina VARCHAR(30) = 'Insert'
+			,@AutorizadoA VARCHAR(30) = 'OperarLaPagina'
+			,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+		
+		-- DESCRIPCION: DEVUELVE EL ID DE UBICACION DE LA TABLA Ubicaciones Y EN CASO DE NO EXISTIR SE AGREGA
+		-- Y SE DEVUELVE EL ID DEL REGISTRO AGREGADO
+
+		EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+		IF (@sResSQL = '')  -- VERIFICO SI TIENE PERMISO P ESTA ACCIÓN
+			BEGIN
+				EXEC usp_VAL_AutorizadoA  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT
+			END
+
+		IF @sResSQL = ''
+			BEGIN
+				SET @Nombre = (SELECT REPLACE (@Nombre, '~/', '')) -- SE LE QUITA LOS CARACTERES ~	(TAMBIEN SE PUEDE CAMBIAR POR SUBSTRING)
+					
+				SET @id = (SELECT id FROM Ubicaciones WHERE Nombre = @Nombre)
+				
+				IF @id IS NULL
+					BEGIN
+						INSERT INTO Ubicaciones
+							(
+							   Nombre
+							   ,UbicacionAbsoluta
+							   ,Observaciones
+						   )
+						VALUES
+						   (
+							   @Nombre
+							   ,@UbicacionAbsoluta
+							   ,@Observaciones
+						   )
+				
+						SET @id = SCOPE_IDENTITY()
+				
+						-- Revisamos el resultado, si OK --> registra el LogRegistros, si falla --> Resgistra el LogError y devuelve el mensaje correcto.
+						EXEC usp_ControlYLogRegistros__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+							,@RegistroId = @id, @Token = @Token, @FuncionDePagina = @FuncionDePagina, @SP = @SP, @RegistrosAfectados = @@ROWCOUNT
+							,@NumeroDeError = @@ERROR, @sResSQL = @sResSQL OUTPUT
+					END
+			END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Ubicaciones /ABMs/ - FIN
+
+
+-- ---------------------------------
+-- Script: 11b_Core__ABMs Particulares.sql - FIN
+-- =====================================================

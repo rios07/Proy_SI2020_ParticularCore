@@ -1,0 +1,183 @@
+﻿@model ControladoresCore.ViewModels.RegistroRolesUsuariosVM
+@using ControladoresCore.Extensiones;
+@{
+    ViewBag.Title = "Roles a usuarios - Actualizar un registro";
+}
+<div class="row">
+    <div class="col-md-10">
+
+    </div>
+
+</div>
+
+@using (Html.BeginCard("Usuario seleccionado"))
+{
+<div class="col-md-10">
+    @Html.DropDownListFor(m => m.UsuarioID, new SelectList(Model.Usuarios, "Id", "Nombre", Model.UsuarioID), "Seleccione una opcion...", new { @class = "form-control select2", onChange = "CargarPermisos($(this))" })
+
+</div>
+}
+
+@using (Html.BeginCard("Roles"))
+{
+    using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            @Html.HiddenFor(model => model.UsuarioID, new { @class = "TargetUsuarioID" })
+            <h4 class="pull-right" style="
+                                        padding-top: -20px;
+                                        border-top-width: -20px;
+                                        margin-top: -10px;
+                                        padding-top: 0px; ">
+
+            </h4>
+            
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col"></th>
+                        <th scope="col">Rol</th>
+                        <th scope="col">Asignado</th>
+                        <th scope="col">Fecha Desde</th>
+                        <th scope="col">Fecha Hasta</th>
+                    </tr>
+                </thead>
+
+                @{
+                    int i = 0;
+
+
+                    foreach (object item in Model.Roles)
+                    {
+                        <tbody>
+                            <tr>
+                                <th scope="row"></th>
+                                <td>
+                                    <div class="form-group">
+                                        <div class="col-md-10">
+                                            @Html.HiddenFor(model => model.Roles[i].RolDeUsuarioId)
+                                            @Html.EditorFor(model => model.Roles[i].Rol, new { htmlAttributes = new { @class = "form-control" } })
+                                            @Html.ValidationMessageFor(model => model.Roles[i].Rol, "", new { @class = "text-danger" })
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <div class="col-md-10">
+                                            @Html.EditorFor(model => model.Roles[i].Asignado, new { htmlAttributes = new { @class = "form-control form-check-input", id = ("Checkbox" + i) } })
+                                            @Html.ValidationMessageFor(model => model.Roles[i].Asignado, "", new { @class = "text-danger" })
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <div class="col-md-10">
+                                            @Html.EditorFor(model => model.Roles[i].FechaDesde, new { htmlAttributes = new { @class = "form-control", type = "date", id = ("FechaDesde" + i) } })
+                                            @Html.ValidationMessageFor(model => model.Roles[i].FechaDesde, "", new { @class = "text-danger" })
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <div class="col-md-10">
+                                            @Html.EditorFor(model => model.Roles[i].FechaHasta, new { htmlAttributes = new { @class = "form-control", type = "date", id = ("FechaHasta" + i) } })
+                                            @Html.ValidationMessageFor(model => model.Roles[i].FechaHasta, "", new { @class = "text-danger" })
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                        </tbody>
+                        i++;
+                    }
+                }
+
+            </table>
+
+            <div class="form-group">
+                <div class="col-md-2"></div>
+                <div class="col-md-5">
+                   
+                    <div class="form-group">
+                        <div class="col-md-offset-2 col-md-10">
+                            @HtmlHelperExtension.Boton("RelAsig_RolesDeUsuarios_A_Usuarios","Listado",ViewBag.Seccion)
+                            @HtmlHelperExtension.Boton("Update", ViewBag.DatosDeUnaPagina.AutorizadoACargarLaPagina,ViewBag.Seccion)
+                            <a class="btn btn-danger removeOnIframe" href="/administracion/Home/Index">Cancelar</a>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5"></div>
+            </div>
+
+        </div>
+                        }
+                    }
+
+<script>
+    function CargarPermisos(Selected) {
+         var datos = {
+                pParam: Selected.val()
+        }
+        Id = Selected.val();
+        if (Id == "") {
+            alert('NOPE');
+            return false;
+        }
+        $('.TargetUsuarioID').val(Id);
+        i = 0;
+        var aux;
+            $.ajax({
+                url: '@Url.Action("CargarUsuariosUpdate")/'+Id, //Usando razor en js, voilá
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (data) {
+                    data.Roles.forEach(function (item) {
+                        $('#Checkbox' + i).prop('checked', data.Roles[i].Asignado);
+                        if (data.Roles[i].FechaDesde == null) {
+                            $('#FechaDesde' + i).val(null);
+                        }
+                        else {
+                            aux = Date(data.Roles[i].FechaDesde);
+                            $('#FechaDesde' + i).val(ArmarFecha(aux));
+                        }
+                        if (data.Roles[i].FechaHasta == null) {
+                            $('#FechaHasta' + i).val(null);
+                        }
+                        else {
+                            aux = Date(data.Roles[i].FechaHasta);
+                            $('#FechaHasta' + i).val(ArmarFecha(aux));
+                        }
+                        i++;
+                    });
+                },
+                data: JSON.stringify(datos)
+            });
+    }
+
+    function ArmarFecha(fechaJson) {
+        
+        var Fechajs = new Date(fechaJson)
+        var Fechajs_dia = Fechajs.getDate();
+        if (Fechajs_dia < 10) {
+            Fechajs_dia = '0' + Fechajs_dia
+        }
+        var Fechajs_mes = Fechajs.getMonth() + 1; //Months are zero based
+        if (Fechajs_mes < 10) {
+            Fechajs_mes = '0' + Fechajs_mes
+        }
+        var Fechajs_anio = Fechajs.getFullYear();
+        var retorno = Fechajs_anio + '-' + Fechajs_mes + '-' + Fechajs_dia;
+        return retorno;
+    }
+
+</script>
+
+
+
+

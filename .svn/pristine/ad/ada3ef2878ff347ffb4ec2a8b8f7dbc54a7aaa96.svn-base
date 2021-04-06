@@ -1,0 +1,54 @@
+﻿@model ControladoresCore.ViewModels.UsuariosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Roles a usuarios  - Listado";
+}
+
+@using (Html.BeginCard("Filtros"))
+{
+    <div class="form-horizontal group-border">
+        
+        
+            <div class="row">
+                <div class="col-lg-8">
+                    <a class="btn btn-primary" href="javascript:reloadDatatable();">Listar</a>
+                    <div class="btn-group dropup mo-mb-2">
+                        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Acciones Secundarias</button>
+                        <div class="dropdown-menu">
+                            @Html.ActionLink("Exportar registros", "Exportar", null, new { @class = "dropdown-item" })
+                            @*<a class="dropdown-item" href="#">Another action</a>
+            <a class="dropdown-item" href="#">Something else here</a>*@
+                            @*<div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="#">Separated link</a>*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        
+    </div>
+}
+@using (Html.BeginCard("Listado"))
+{
+    <table id="tableAjax" class="table table-bordered table-striped responsive table-hover per100">
+        <thead>
+            <tr>
+                <th field="UserName">
+                    @Html.DisplayNameFor(model => model.UserName)
+                </th>
+                <th field="NombreCompleto">
+                    @Html.DisplayNameFor(model => model.NombreCompleto)
+                </th>
+            <th field="Activo" mask="<img style='width: 20px; height:20px; display:block;margin:auto;' src='/template/img/{VAL}.svg'>">
+                Activo
+            </th>
+
+
+
+                <th field="Id" mask="<a href='Update/{VAL}'>Abrir</a>">Abrir</th>
+
+
+            </tr>
+        </thead>
+    </table>
+}

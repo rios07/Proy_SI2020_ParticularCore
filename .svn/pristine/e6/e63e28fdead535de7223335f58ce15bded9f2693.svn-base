@@ -1,0 +1,28 @@
+﻿<script src="~/template/plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.bootstrap4.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.buttons.min.js"></script>
+<script src="~/template/plugins/datatables/dataTables.responsive.min.js"></script>
+<script src="~/template/js/coreDatatables.js"></script>
+
+
+<script>
+    //Si se quiere mostrar en un registro la fecha con hora crear una variable que se llame mostrarHorar
+    function QuitarHoraFechas() {
+        if (typeof mostrarHora === 'undefined') {
+            regex = new RegExp('\\d+\/\\d+\/\\d+');
+
+            $('#tableAjax tbody tr td').each(function (a) {
+                value = this.innerText;
+                if (regex.test(value)) {
+                    this.innerText = value.match(regex);
+                    this.innerText = this.innerText.replace(/\//g, '-');
+                }
+
+
+            });
+        }
+        
+    }
+
+
+</script>

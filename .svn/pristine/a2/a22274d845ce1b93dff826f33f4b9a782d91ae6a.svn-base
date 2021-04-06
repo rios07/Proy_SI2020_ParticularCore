@@ -1,0 +1,196 @@
+﻿@model ControladoresCore.ViewModels.ReservasDeRecursosVM
+@using ControladoresCore.Extensiones
+@{
+    ViewBag.Title = "Reservas de recursos - Registro";
+}
+<div class="row">
+    <div class="col-md-10">
+
+    </div>
+</div>
+@using (Html.BeginCard("Reserva seleccionada"))
+{
+    using (Html.BeginForm())
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="form-horizontal">
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+            @Html.HiddenFor(model => model.Id)
+            
+            <div class="form-group">
+                @Html.LabelFor(model => model.UsuarioOriginante, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.UsuarioOriginante, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.UsuarioOriginante, "", new { @class = "text-danger" })
+                </div>
+            </div>
+            <div class="form-group">
+                @Html.LabelFor(model => model.UsuarioDestinatario, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.UsuarioDestinatario, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.UsuarioDestinatario, "", new { @class = "text-danger" })
+                </div>
+            </div>
+            <div class="form-group">
+                @Html.LabelFor(model => model.Recurso, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                <div class="col-md-9">
+                    @Html.EditorFor(model => model.Recurso, new { htmlAttributes = new { @class = "form-control", disabled = "disabled", @readonly = "readonly" } })
+                    @Html.ValidationMessageFor(model => model.Recurso, "", new { @class = "text-danger" })
+                </div>
+            </div>
+            <div class="form-group ">
+                @Html.LabelFor(model => model.FechaDeInicio, htmlAttributes: new { @class = "col-form-label col-md-3" })
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                        @Html.EditorFor(model => model.FechaDeInicio, new { htmlAttributes = new { @class = "form-control datepicker", disabled = "disabled", @readonly = "readonly" } })
+                        @Html.ValidationMessageFor(model => model.FechaDeInicio, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+            <div class="form-group ">
+                @Html.LabelFor(model => model.FechaLimite, htmlAttributes: new { @class = "col-form-label col-md-3" })
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-addon bg-custom b-0"><i class="fa fa-calendar"></i></span>
+                        @Html.EditorFor(model => model.FechaLimite, new { htmlAttributes = new { @class = "form-control datepicker", disabled = "disabled", @readonly = "readonly" } })
+                        @Html.ValidationMessageFor(model => model.FechaLimite, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+             <div class="form-group">
+                    @Html.LabelFor(model => model.ReservaAprobada, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ReservaAprobada, new { htmlAttributes = new { @class = "", @onclick = "return false;", disabled = "disabled" } })
+                        @Html.ValidationMessageFor(model => model.ReservaAprobada, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    @Html.LabelFor(model => model.ObservacionesDelOriginante, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ObservacionesDelOriginante, new { htmlAttributes = new { @class = "form-control", @readonly = "readonly", disabled = "disabled" } })
+                        @Html.ValidationMessageFor(model => model.ObservacionesDelOriginante, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                @*TODO: IF ROL PARA APROBAR *@
+                <div class="form-group">
+                    @Html.LabelFor(model => model.ObservacionesDelAprobador, htmlAttributes: new { @class = "col-form-label col-md-3 " })
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ObservacionesDelAprobador, new { htmlAttributes = new { @class = "form-control", @readonly = "readonly", disabled = "disabled" } })
+                        @Html.ValidationMessageFor(model => model.ObservacionesDelAprobador, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+
+        </div>
+    }
+
+}
+
+
+<div class="card m-b-20" id="dyn_2">
+    <div class="card-body fade-in">
+        <div class="col-lg-12 m-2 pull-left botonera">
+            @HtmlHelperExtension.Boton("ReservasDeRecursos","Listado",ViewBag.Seccion)
+
+            @HtmlHelperExtension.Boton("ReservasDeRecursos", "Update", Model.Id, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina,ViewBag.Seccion)
+
+            @HtmlHelperExtension.Boton("ReservasDeRecursos", "Delete", Model.Id, ViewBag.DatosDeUnaPagina.AutorizadoAOperarLaPagina, ViewBag.DatosDeUnaPagina.AutorizadoAAccionesEspeciales , pSeccion: ViewBag.Seccion)
+            @if (Model.EsResponsable)
+            {
+                if (Model.ReservaAprobada)
+                {
+                    <button onclick="return false" class="btn btn-primary"  class="btn btn-info" disabled=""> Reserva ya aprobada</button>
+
+                }
+                else
+                {
+                    <button onclick="return false" class="btn btn-primary" data-toggle="modal" data-target="#Aprobacion" class="btn btn-info"> Aprobar reserva</button>
+
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<div id="accordion">
+    <div class="card">
+        <div class="card-header p-0" style="background-color: #adadad;border-color:grey;color:white;" id="headingOne" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+            <h5 class="mb-0">
+                <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Historia del Registro
+                </button>
+            </h5>
+        </div>
+
+        <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+            <div class="card-body">
+                @Html.Raw(Model.Historia)
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="Aprobacion" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header pb-2 pt-0 pl-2 pr-1" style="background: var(--color-primary);color: #ffffff;">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span color="white" aria-hidden="true">&times;</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title ml-2" id="HeaderAprobacion" >Aprobar reserva</h4>
+            </div>
+            <div class="modal-body" >
+
+                <div class="form-group">
+                    <label class="col-form-label col-md-3 " for="ModalObs">Observaciones del aprobador</label>
+                    <div class="col-md-9">
+                        <input class="form-control text-box single-line" id="ModalObs" name="ModalObs"  type="text" value="">
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+               
+                    <button type="button" class="btn btn-primary" onclick="Aprobar();">Aprobar</button>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function Aprobar() {
+        var datos = {
+            pParam: $('#Id').val(),
+            pObservacionesDelAprobador: $('#ModalObs').val()
+        };
+        $.ajax({
+            url: '@Url.Action("AprobarReserva")',
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(datos),
+            contentType: 'application/json',
+            success: function (retorno) {
+                if (retorno == "") {
+                    swal({
+                        title: "Reserva aprobada exitosamente!",
+                        type: "success",
+                        showCancelButton: false
+                    });
+                } else {
+                    swal({
+                       
+                        title: "Error",
+                        type: "error",
+                        text: retorno,
+                        showCancelButton: false
+                    });
+                }
+                
+            }
+        });
+    }
+</script>

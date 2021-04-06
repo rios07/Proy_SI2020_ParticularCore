@@ -1,0 +1,746 @@
+-- =====================================================
+-- Descripción: Funciones
+-- Script: 06__Core__Funciones.sql - INICIO
+-- =====================================================
+
+USE DB_ParticularCore
+GO
+
+
+		-- Tablas Involucradas: - INICIO
+				-- Contextos
+				-- Usuarios
+		-- Tablas Involucradas: - FIN
+
+
+--Select
+--    UserID, 
+--    UserName, 
+--    [Password],   
+--    CASE [Password]
+--        WHEN HASHBYTES('SHA2_512', 'SomePassword') THEN 'Authorized User'
+--        ELSE 'Not Authorized'
+--    END As Status
+--    from Users
+--GO
+
+
+
+
+-- SP-TABLA: Usuarios /Funciones/ - INICIO
+IF (OBJECT_ID('ufc_GenerarUserName_ConNApellido') IS NOT NULL) DROP FUNCTION ufc_GenerarUserName_ConNApellido
+GO
+CREATE FUNCTION ufc_GenerarUserName_ConNApellido
+	(
+		@Prefijo			VARCHAR(5)
+		,@Nombre			VARCHAR(50)
+		,@Apellido			VARCHAR(50)
+		,@ValorAleatorio	VARCHAR(50)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		-- No deja ejecutar ni RAND() ni NEWID() dentro de funciones --> la paso.
+		--DECLARE @Pass VARCHAR(100) = 'CambiarPWD' + CAST(ROUND(((999 - 1) * RAND() + 1), 0) AS VARCHAR(MAX))
+		--DECLARE @Aleatorio varchar(50) = CONVERT(varchar(50), NEWID())
+		--SET @NumAleatorio = ROUND(((999 - 1) * @NumAleatorio + 1), 0)
+		
+		
+		RETURN REPLACE(LEFT(@Prefijo + SUBSTRING(@Nombre, 1, 1) + @Apellido + @ValorAleatorio, 40), ' ', '')
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_GenerarUserName_ConNombrePuntoApellido') IS NOT NULL) DROP FUNCTION ufc_GenerarUserName_ConNombrePuntoApellido
+GO
+CREATE FUNCTION ufc_GenerarUserName_ConNombrePuntoApellido
+	(
+		@Prefijo			VARCHAR(5)
+		,@Nombre			VARCHAR(50)
+		,@Apellido			VARCHAR(50)
+		,@ValorAleatorio	VARCHAR(50)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		RETURN REPLACE(LEFT(@Prefijo + @Nombre + '.' + @Apellido + @ValorAleatorio, 40), ' ', '')
+	END
+GO
+-- SP-TABLA: Usuarios /Funciones/ - FIN
+
+
+
+IF (OBJECT_ID('ufc_GenerarSHA1') IS NOT NULL) DROP FUNCTION ufc_GenerarSHA1
+GO
+CREATE FUNCTION ufc_GenerarSHA1
+	(
+		@Pwd		VARCHAR(100)
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		-- Lo que sigue devuelve un valor como codificado a otra cosa a travéz de la funcion
+		--RETURN RIGHT(HashBytes('SHA1', @Pwd), 40) -- Por que el SHA1 tira un x0 inicial que no va en .NET y luego no coincide.
+		
+		-- Para que funcione hay que hacer lo que sigue (Y no entiendo por que):
+		DECLARE @HashThis nvarchar(40) = CONVERT(nvarchar(40),@Pwd);  
+		--SELECT HASHBYTES('SHA1', @HashThis);  
+
+		RETURN Convert(nvarchar(40),HashBytes('SHA1', @HashThis), 2)
+	END
+GO
+
+
+
+-- SP-TABLA: Contextos /Funciones/ - INICIO // 1ero va el de Contexto
+IF (OBJECT_ID('ufc_ContextoDelUsuario') IS NOT NULL) DROP FUNCTION ufc_ContextoDelUsuario
+GO
+CREATE FUNCTION ufc_ContextoDelUsuario
+	(
+		@UsuarioId				INT
+	)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @ContextoId INT = (SELECT ContextoId FROM Usuarios WHERE id = @UsuarioId)
+		RETURN @ContextoId
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_CodigoDelContextoDelUsuario') IS NOT NULL) DROP FUNCTION ufc_CodigoDelContextoDelUsuario
+GO
+CREATE FUNCTION ufc_CodigoDelContextoDelUsuario
+	(
+		@UsuarioId				INT
+	)
+	RETURNS VARCHAR(40)
+	AS
+	BEGIN
+		DECLARE @Codigo VARCHAR(40) = (SELECT C.Codigo 
+										FROM Usuarios U 
+											INNER JOIN Contextos C ON U.ContextoId = C.id
+										WHERE U.id = @UsuarioId
+									)
+		RETURN @Codigo
+	END
+GO
+
+
+
+
+--IF (OBJECT_ID('ufc_Contextos_Id_SonIguales') IS NOT NULL) DROP FUNCTION ufc_Contextos_Id_SonIguales
+--GO
+--CREATE FUNCTION ufc_Contextos_Id_SonIguales
+--	(
+--		@ContextoId				INT
+--		,@ContextoId_2			INT
+--	)
+--	RETURNS VARCHAR(1000)
+--	AS
+--	BEGIN
+--		DECLARE @sResSQL VARCHAR(1000)
+--		IF @ContextoId = @ContextoId_2
+--			BEGIN
+--				SET @sResSQL = ''
+--			END
+--		ELSE
+--			BEGIN
+--				EXEC @sResSQL = ufc_Respuesta__ErrorDeValidacionAlContexto
+--			END	
+--		RETURN @sResSQL
+--	END
+--GO
+
+
+
+
+--IF (OBJECT_ID('ufc_Contextos_Id_SonIguales_x3') IS NOT NULL) DROP FUNCTION ufc_Contextos_Id_SonIguales_x3
+--GO
+--CREATE FUNCTION ufc_Contextos_Id_SonIguales_x3
+--	(
+--		@ContextoId				INT
+--		,@ContextoId_2			INT
+--		,@ContextoId_3			INT
+--	)
+--	RETURNS VARCHAR(1000)
+--	AS
+--	BEGIN
+--		DECLARE @sResSQL			VARCHAR(1000)
+--		IF (@ContextoId = @ContextoId_2) AND (@ContextoId = @ContextoId_3)
+--			BEGIN
+--				SET @sResSQL = ''
+--			END
+--		ELSE
+--			BEGIN
+--				EXEC @sResSQL = ufc_Respuesta__ErrorDeValidacionAlContexto
+--			END	
+--		RETURN @sResSQL
+--	END
+--GO
+-- SP-TABLA: Contextos /Funciones/ - FIN
+
+
+
+
+-- SP - Usuario Valido para operar Anónimamente - INICIO     // no se utiliza, se reemplazó por una VAL
+--IF (OBJECT_ID('ufc_UsuarioAdminAnonimo') IS NOT NULL) DROP FUNCTION ufc_UsuarioAdminAnonimo
+--GO				
+--CREATE FUNCTION ufc_UsuarioAdminAnonimo
+---- Es para los casos donde se necesita que opere alguien que no está logueado --> no tiene Usuario --> Que pase el @Contexto y le damos un Usuario Para operar en estos casos:
+--	(
+--			@UsuarioQueEjecutaId				INT
+--			,@Contexto							VARCHAR(100) -- CODIGO
+--	)
+--	RETURNS INT
+--	AS
+--	BEGIN
+--		DECLARE @UsuarioId INT -- Por defecto vuelve como NULL
+		
+--		IF @UsuarioQueEjecutaId = 1 -- Para realizar esta consulta el @UsuarioQueEjecutaId debe ser el que no se puede operar.
+--			BEGIN
+--				SET @UsuarioId = (SELECT U.id 
+--									FROM Usuarios U
+--										INNER JOIN Contextos CON ON U.ContextoId = CON.id
+--									WHERE 
+--										U.UserName = 'administrador' -- NO VA MAS EL USUARIO ADMIN ANÓNIMO, LO HACEMOS CON ADMINISTRADOR Y CHAU.
+--										--(U.EsUsuarioAdminAnonimo = '1')
+--										--AND (U.Activo = '1')
+--										AND (LOWER(CON.Codigo) = LOWER(@Contexto))
+--									)
+--			END
+	
+--		RETURN @UsuarioId -- Si no seleccionó nada, devuelve NULL --> no le servirá.
+--	END
+--GO
+-- SP - Usuario Valido para operar Anónimamente - FIN
+
+
+
+
+-- SP - Ubicaciones - INICIO
+IF (OBJECT_ID('ufc_RootDeCarpetasDelSistema') IS NOT NULL) DROP FUNCTION ufc_RootDeCarpetasDelSistema
+GO				
+CREATE FUNCTION ufc_RootDeCarpetasDelSistema
+	()
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		RETURN 'Intranet/__Contenidos/Contextos'
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_UbicacionCompletaDeConenidosDeTabla') IS NOT NULL) DROP FUNCTION ufc_UbicacionCompletaDeConenidosDeTabla
+GO				
+CREATE FUNCTION ufc_UbicacionCompletaDeConenidosDeTabla
+	(
+		@UsuarioQueEjecutaId		INT -- Para ver su contexto
+		--,@Tabla						VARCHAR(80)
+		,@TablaId					INT
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Root VARCHAR(100) 
+		EXEC @Root = ufc_RootDeCarpetasDelSistema
+		
+		DECLARE @ContextoId INT
+		EXEC @ContextoId = ufc_ContextoDelUsuario  @UsuarioId = @UsuarioQueEjecutaId
+		
+		DECLARE @CarpetaDeContexto VARCHAR(16) = (SELECT CarpetaDeContenidos FROM Contextos WHERE id = @ContextoId)
+		
+		--DECLARE @CarpetaDeTabla VARCHAR(12) = (SELECT Nomenclatura FROM Tablas WHERE Nombre = @Tabla)
+		DECLARE @CarpetaDeTabla VARCHAR(12) = (SELECT Nomenclatura FROM Tablas WHERE id = @TablaId)
+		
+		DECLARE @PathCompleto VARCHAR(100) = @Root + '/' + @CarpetaDeContexto + '/' + @CarpetaDeTabla
+		
+		RETURN @PathCompleto
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_UbicacionRelativaCompletaDeConenidosDeTabla') IS NOT NULL) DROP FUNCTION ufc_UbicacionRelativaCompletaDeConenidosDeTabla
+GO				
+CREATE FUNCTION ufc_UbicacionRelativaCompletaDeConenidosDeTabla
+	(
+		@UsuarioQueEjecutaId		INT -- Para ver su contexto
+		--,@Tabla						VARCHAR(80)
+		,@TablaId					INT
+	)
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @PathCompleto VARCHAR(100)
+		--EXEC @PathCompleto = ufc_UbicacionCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @Tabla = @Tabla
+		EXEC @PathCompleto = ufc_UbicacionCompletaDeConenidosDeTabla  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @TablaId = @TablaId
+		
+		RETURN @PathCompleto --'~/' + @PathCompleto
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_UbicacionRelativaDeIconos') IS NOT NULL) DROP FUNCTION  ufc_UbicacionRelativaDeIconos
+GO				
+CREATE FUNCTION  ufc_UbicacionRelativaDeIconos
+	()
+	RETURNS VARCHAR(100)
+	AS
+	BEGIN
+		DECLARE @Root VARCHAR(100) 
+		EXEC @Root = ufc_RootDeCarpetasDelSistema
+		
+		RETURN @Root + '/' + 'images/iconos'
+	END
+GO
+-- SP - Ubicaciones - FIN
+
+
+
+
+-- SP - FECHAS - INICIO
+IF (OBJECT_ID('ufc_FormatoFecha') IS NOT NULL) DROP FUNCTION ufc_FormatoFecha
+GO
+CREATE FUNCTION ufc_FormatoFecha
+	(
+		@Fecha				DATE
+	)
+	RETURNS VARCHAR(10)
+	AS
+	BEGIN
+		RETURN CONVERT(VARCHAR(10), @Fecha, 103)
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_HTML_to_VARCHAR') IS NOT NULL) DROP FUNCTION ufc_HTML_to_VARCHAR
+GO
+CREATE FUNCTION ufc_HTML_to_VARCHAR
+	(
+		@TextoHTML VARCHAR (MAX)
+	)
+	RETURNS VARCHAR(MAX) AS
+	
+	BEGIN 
+	IF @TextoHTML IS NOT NULL
+		BEGIN
+			DECLARE @Inicio INT
+			DECLARE @Fin INT
+			DECLARE @Largo INT
+			SET @Inicio = CHARINDEX('<',@TextoHTML)
+			SET @Fin = CHARINDEX('>',@TextoHTML,CHARINDEX('<',@TextoHTML))
+			SET @Largo = (@Fin - @Inicio) + 1
+			WHILE @Inicio > 0 AND @Fin > 0 AND @Largo > 0
+			
+			BEGIN -- SE QUITAN LOS TAGS
+				SET @TextoHTML = STUFF(@TextoHTML,@Inicio,@Largo,'')
+				SET @Inicio = CHARINDEX('<',@TextoHTML)
+				SET @Fin = CHARINDEX('>',@TextoHTML,CHARINDEX('<',@TextoHTML))
+				SET @Largo = (@Fin - @Inicio) + 1
+			END
+		END
+	   
+	   IF @TextoHTML IS NOT NULL
+			BEGIN   -- SE MODIFICAN LETRAS CON ACENTO
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Aacute;' COLLATE Latin1_General_CS_AS) , 'Á')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&aacute;' COLLATE Latin1_General_CS_AS) , 'á')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Eacute;' COLLATE Latin1_General_CS_AS) , 'É')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&eacute;' COLLATE Latin1_General_CS_AS) , 'é')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Iacute;' COLLATE Latin1_General_CS_AS) , 'Í')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&iacute;' COLLATE Latin1_General_CS_AS) , 'í')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Oacute;' COLLATE Latin1_General_CS_AS) , 'Ó')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&oacute;' COLLATE Latin1_General_CS_AS) , 'ó')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&Uacute;' COLLATE Latin1_General_CS_AS) , 'Ú')
+			  SELECT @TextoHTML =  replace (@TextoHTML, ('&uacute;' COLLATE Latin1_General_CS_AS), 'ú')
+			  SELECT @TextoHTML =  replace (@TextoHTML, 'o&nbsp;' , '')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&nbsp;' , '')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&ldquo;' , '"')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&rdquo;' , '"')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&iquest;' , '¿')
+			  SELECT @TextoHTML =  replace (@TextoHTML, '&ordm;' , '°')		  
+			  
+			END	
+			RETURN @TextoHTML		      
+	END
+GO
+
+
+
+
+-- SPLIT STRINGS TO TABLE - INICIO
+IF (OBJECT_ID('ufc_String_ToTable') IS NOT NULL) DROP FUNCTION ufc_String_ToTable
+GO
+CREATE FUNCTION ufc_String_ToTable
+	(
+	   @Lista      NVARCHAR(MAX)
+	   --,@Delimitador NVARCHAR(255) = ','
+	)
+RETURNS @Strings TABLE
+		(valor NVARCHAR(255))
+	AS
+	BEGIN
+		SET @Lista = REPLACE(@Lista, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@Lista) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @Lista)
+			--SET @Position = CHARINDEX(@Delimitador, @Lista)
+			IF @Position > 0
+				BEGIN
+					INSERT @Strings
+					SELECT LEFT(@Lista, @Position - 1)
+					SET @Lista = RIGHT(@Lista, LEN(@Lista) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @Strings
+					SELECT @Lista
+					SET @Lista = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+-- SPLIT STRINGS TO TABLE - FIN
+
+
+
+
+-- SP-TABLA: - INICIO
+IF (OBJECT_ID('ufc_IdsString_ToTable_INT') IS NOT NULL) DROP FUNCTION ufc_IdsString_ToTable_INT
+GO
+CREATE FUNCTION ufc_IdsString_ToTable_INT
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @IDs TABLE
+		(id INT)
+	AS
+	BEGIN
+		SET @IdsString = REPLACE(@IdsString, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, LEFT(@IdsString, @Position - 1))
+					SET @IdsString = RIGHT(@IdsString, LEN(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_IdsString_ToTable_INT_ConIndice') IS NOT NULL) DROP FUNCTION ufc_IdsString_ToTable_INT_ConIndice
+GO
+CREATE FUNCTION ufc_IdsString_ToTable_INT_ConIndice
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @IDs TABLE
+		(Indice INT IDENTITY(1,1), id INT)
+	AS
+	BEGIN
+		SET @IdsString = REPLACE(@IdsString, ' ', '') -- Primero le quito los espacios
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, LEFT(@IdsString, @Position - 1))
+					SET @IdsString = RIGHT(@IdsString, LEN(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @IDs
+					SELECT CONVERT(INT, @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+-- SP-TABLA: - FIN
+
+
+
+
+-- SP-TABLA: - INICIO
+IF (OBJECT_ID('ufc_IdsString_ToTable_CHAR') IS NOT NULL) DROP FUNCTION ufc_IdsString_ToTable_CHAR
+GO
+CREATE FUNCTION ufc_IdsString_ToTable_CHAR
+		(@IdsString				VARCHAR(MAX))
+		
+	RETURNS @Codigos TABLE
+		(Codigo CHAR(2))
+	AS
+	BEGIN
+		DECLARE @Position INT
+		WHILE LEN(@IdsString) > 0
+		BEGIN
+			SET @Position = CHARINDEX(',', @IdsString)
+			IF @Position > 0
+				BEGIN
+					INSERT @Codigos
+					SELECT CONVERT(CHAR(2), left(@IdsString, @Position - 1))
+					SET @IdsString = right(@IdsString, len(@IdsString) - @Position)
+				END --ENDIF
+			ELSE
+				BEGIN
+					INSERT @Codigos
+					SELECT CONVERT(CHAR(2), @IdsString)
+					SET @IdsString = ''
+				END --ENDIF
+		END
+		
+		RETURN
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_GetTRUE_SiEsMayorQueUNO') IS NOT NULL) DROP FUNCTION ufc_GetTRUE_SiEsMayorQueUNO
+GO
+CREATE FUNCTION ufc_GetTRUE_SiEsMayorQueUNO
+		(@id INT)
+		
+	RETURNS BIT
+		
+	AS
+	BEGIN
+		DECLARE @sResSQL AS BIT
+		IF @id > 1
+			BEGIN
+				SET @sResSQL = 0				
+			END
+		ELSE
+			BEGIN
+				SET @sResSQL = 1
+			END
+		--ENDIF
+		
+		RETURN @sResSQL
+	END
+GO
+
+
+
+
+--	@Formato_Listado =0	: Rearmar 'Seleccionar'
+--		 =1	: "Tabla Entera"
+--		 =2	: "Sin el 0"
+--		 =-1: Con 'Todos' Sin 'Seleccionar'
+--		 =-2: Add 'Seleccionar' y 'Todos'
+IF (OBJECT_ID('ufc_MinimoId_inDDLs') IS NOT NULL) DROP FUNCTION ufc_MinimoId_inDDLs
+GO
+CREATE FUNCTION ufc_MinimoId_inDDLs
+		(@Formato_Listado INT)
+	RETURNS INT
+
+	AS
+		BEGIN
+			RETURN CASE
+				--WHEN @Formato_Listado = -1 THEN 1
+				--WHEN @Formato_Listado = -2 THEN 1
+				--WHEN @Formato_Listado = 0 THEN 1
+				--WHEN @Formato_Listado = 1 THEN 0
+				--WHEN @Formato_Listado = 2 THEN 1
+				--ELSE 0
+				WHEN @Formato_Listado = 1 OR @Formato_Listado = -3 OR @Formato_Listado = 3  THEN 0
+				ELSE	1
+		END
+	END
+GO
+-- SP-TABLA:  - FIN
+
+
+
+
+-- SP-TABLA: - INICIO
+--	@Formato_Listado =0	: Rearmar 'Seleccionar'
+--		 =1	: "Tabla Entera"
+--		 =2	: "Sin el 0"
+--		 =-1: Con 'Todos' Sin 'Seleccionar'
+--		 =-2: Rearmar 'Seleccionar' y ADD 'Todos'
+--		 =-3: Rearmar 'Seleccionar' ID=-2
+IF (OBJECT_ID('ufc_Adds_To_DDLs') IS NOT NULL) DROP FUNCTION ufc_Adds_To_DDLs
+GO
+CREATE FUNCTION ufc_Adds_To_DDLs
+		(@Formato_Listado INT)
+		
+		RETURNS @IDs TABLE
+			(
+				id			INT
+				,Codigo		VARCHAR(2)
+				,Data		VARCHAR(50)
+			)
+	AS
+	BEGIN
+		IF @Formato_Listado = '-2'
+			BEGIN
+				INSERT @IDs
+				SELECT	 '0' AS id
+						,'0' AS Codigo
+						,' - Seleccionar - ' AS Data
+						
+				UNION
+				
+				SELECT	 '-1' AS id
+						,'-1' AS Codigo
+						,' - Todos - ' AS Data
+			END
+		ELSE
+			IF @Formato_Listado = '-1'
+				BEGIN
+					INSERT @IDs
+					SELECT	 '-1' AS id
+							,'-1' AS Codigo
+							,' - Todos - ' AS Data
+				END
+			ELSE
+				IF @Formato_Listado = '0'
+					BEGIN
+						INSERT @IDs
+						SELECT	 '0' AS id
+								,'0' AS Codigo
+								,' - Seleccionar - ' AS Data
+					END
+				ELSE
+					IF @Formato_Listado = '-3'
+						BEGIN
+							INSERT @IDs
+							SELECT	 '-2' AS id
+									,'-2' AS Codigo
+									,' - Seleccionar - ' AS Data
+						END
+					ELSE
+						IF @Formato_Listado = '3'
+							BEGIN
+								INSERT @IDs
+								SELECT	 '-1' AS id
+										,'-1' AS Codigo
+										,' - Todos - ' AS Data
+							END
+						ELSE
+							IF @Formato_Listado = '-4'
+								BEGIN
+									INSERT @IDs
+									SELECT	 '-2' AS id
+											,'-2' AS Codigo
+											,' - Todos - ' AS Data
+								END
+			--ENDIF
+		--ENDIF
+	
+		RETURN
+	
+	END
+GO
+
+
+
+
+IF (OBJECT_ID('ufc_ValorSiguiente') IS NOT NULL) DROP FUNCTION ufc_ValorSiguiente
+GO
+CREATE FUNCTION ufc_ValorSiguiente
+		(
+			@Tabla			VARCHAR(100)
+			,@Campo			NVARCHAR(100) = 'Numero' -- Opcional, campo por defecto
+			,@ContextoId	INT = '-1' -- Opcional, valor por defecto que omite el contexto
+		)
+		RETURNS INT
+	AS
+	BEGIN
+		DECLARE	@NumAnterior INT
+		DECLARE @SQLString NVARCHAR(500)
+		DECLARE @ParmDefinition NVARCHAR(500)
+		DECLARE @MaxOUT INT
+		
+		IF (@ContextoId	= '-1')
+			BEGIN
+				SET @SQLString = N'SELECT @MaxOUT = MAX(' + @Campo + ') FROM ' + @Tabla
+			END
+		ELSE
+			BEGIN
+				SET @SQLString = N'SELECT @MaxOUT = MAX(' + @Campo + ') FROM ' + @Tabla + ' WHERE ContextoId = ' + CAST(@ContextoId AS VARCHAR(MAX))
+			END
+		
+		SET @ParmDefinition = N'@MaxOUT INT OUTPUT'
+		EXECUTE sp_executesql @SQLString, @ParmDefinition, @MaxOUT = @MaxOUT OUTPUT
+		
+		IF @MaxOUT > 0  -- O sea, no es el 1ero
+			BEGIN       
+				SET @NumAnterior = @MaxOUT
+     		END
+		ELSE
+			BEGIN 
+				SET @NumAnterior = 0 --Es el primero 
+			END
+		
+		RETURN @NumAnterior + 1
+	END
+GO
+-- SP-TABLA:  - FIN
+
+
+
+
+---- SP-TiposDeOperaciones:  - INICIO
+--IF (OBJECT_ID('ufc_TiposDeOperaciones_EstadoDeRegistro') IS NOT NULL) DROP FUNCTION ufc_TiposDeOperaciones_EstadoDeRegistro
+--GO				
+--CREATE FUNCTION ufc_TiposDeOperaciones_EstadoDeRegistro
+--	(
+--		@Activo			BIT
+--	)
+--	RETURNS INT
+--	AS
+--	BEGIN
+--		DECLARE @TipoDeLogRegistro	INT
+		
+--		IF @Activo = 1
+--			BEGIN
+--				SET @TipoDeLogRegistro = 5
+--			END
+--		ELSE
+--			BEGIN
+--				SET @TipoDeLogRegistro = 4
+--			END
+		
+--		RETURN @TipoDeLogRegistro
+--	END
+--GO
+---- SP-TiposDeOperaciones:  - FIN
+
+
+
+
+-- ---------------------------------
+-- Script: 06__Core__Funciones.sql - FIN
+-- =====================================================

@@ -1,0 +1,254 @@
+-- =====================================================
+-- Author:		Facundo Campaña
+-- CREATE date: 19/04/2013
+-- Description:	INSERT VALUES DEL SISTEMA - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- INSERT VALUES DEL SISTEMA: - Inicio
+-- -------------------------
+
+
+
+				-- Variable que utilizamos en los insert - INICIO
+					DECLARE @UsuarioQueEjecutaId INT -- OJO, q si va UsuarioId=1 -- > VA EN ContextoId=1 --> no logueable
+						,@FechaDeEjecucion DATETIME = GetDate()
+						,@sResSQL VARCHAR(1000)	
+						,@id INT
+						,@ContextoId_SinContexto INT = 1
+						,@ContextoId_Sistemas INT = 2
+						,@ContextoId_Pruebas INT = 3
+				-- Variable que utilizamos en los insert - FIN
+				
+				
+				
+				
+
+-- INSERT VALUES: CuentasDeEnvios - INICIO
+	-- Agrego un par para poder testear
+	--PRINT 'Insertando CuentasDeEnvios' 
+	-- Id = 1: Ya fué insertada en Script Predecesor: 	INSERT INTO CuentasDeEnvios (Nombre, CuentaDeEmail, PwdDeEmail, Smtp, Puerto, Observaciones) VALUES ('Email para tareas', 'tareas@sistemas.com', 'XXX', 'smtp.sistemas.com', '25', 'Para los envío de tareas.')
+	--INSERT INTO CuentasDeEnvios (Nombre, CuentaDeEmail, PwdDeEmail, Smtp, Puerto, Observaciones) VALUES ('Email para ??', '??@sistemas.com', 'XXX', 'smtp.sistemas.com', '25', 'Para los envío de ??.')
+	--SELECT * FROM CuentasDeEnvios
+-- INSERT VALUES: CuentasDeEnvios - FIN
+			
+	
+
+
+-- INSERT VALUES RelAsig_CuentasDeEnvios_A_Tablas: - INICIO  (Necesitaba 1ero las Tablas)
+	--PRINT 'Insertando RelAsig_CuentasDeEnvios_A_Tablas'
+	--DECLARE @TablaDeTareasId AS INT = (SELECT id FROM Tablas WHERE Nombre = 'Tablas')
+	
+	--INSERT INTO RelAsig_CuentasDeEnvios_A_Tablas (ContextoId, CuentaDeEnvioId, TablaId) VALUES ('2', '1', @TablaDeTareasId)
+	--SELECT * FROM RelAsig_CuentasDeEnvios_A_Tablas
+---- INSERT VALUES RelAsig_CuentasDeEnvios_A_Tablas: - FIN
+
+
+
+
+-- INSERT VALUES: TiposDeArchivos - INICIO // El valor DEFAULT ya se ingresó en el Archivo predecesor.
+	PRINT 'Insertando TiposDeArchivos'
+	-- No se define a nivel de formato (PDF, Excel, Word, etc), si no a nivel de tipo (Cad, office, Imágen, etc).
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('CAD', 'Archivo de Cad.')
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('Documento Editable', 'Archivo de documentacion.')
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('Documento No Editable', 'Archivo de documentacion.')
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('Cálculo', 'Archivo de Hoja de Cálculo.')
+	INSERT INTO TiposDeArchivos (Nombre, Observaciones) VALUES ('Imágen', 'Archivo de Imágen.')
+	SELECT * FROM TiposDeArchivos
+-- INSERT VALUES: TiposDeArchivos - FIN
+
+
+
+
+-- INSERT VALUES: Ubicaciones - INICIO
+	--PRINT 'Insertando Ubicaciones'
+	--INSERT INTO Ubicaciones (Nombre, Observaciones, UbicacionAbsoluta) VALUES ('Intranet/__Contenidos/Contextos/', 'Es el root de todo', 0) -- id=1: Root del sitio
+	--SELECT * FROM Ubicaciones
+-- INSERT VALUES: TiposDeLogLogins - FIN
+
+
+
+
+-- INSERT VALUES: Iconos - INICIO // EL DEFAULT YA LO INSERTÉ EN EL SCRIPT PREDECESOR
+	PRINT 'Insertando Iconos'
+	SET @UsuarioQueEjecutaId = 1 
+		
+	----id=1:
+	--EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+	--	,@Nombre = 'Default'
+	--	,@Imagen = 'default.png'
+	--	,@Altura = '22'
+	--	,@Ancho	= '22'
+	--	,@OffsetX = '0'
+	--	,@OffsetY = '0'
+	--	,@Observaciones	= 'Archivo por defecto para todos los no reconocidos o indicados.'
+	--	,@sResSQL = @sResSQL OUTPUT
+	--	,@id = @id OUTPUT
+	--	SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+
+		
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Word'
+		,@Imagen = 'doc.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo de Word.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Word X'
+		,@Imagen = 'docx.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo de Word a partir de 2007 inclusive.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Excel'
+		,@Imagen = 'xls.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo de Excel.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Excel X'
+		,@Imagen = 'xlsx.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo de Excel a partir de 2007 inclusive.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Pdf'
+		,@Imagen = 'pdf.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo Adobe Acrobat.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	EXEC [dbo].[usp_Iconos__Insert] @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Jpg'
+		,@Imagen = 'jpg.png'
+		,@Altura = '22'
+		,@Ancho	= '22'
+		,@OffsetX = '0'
+		,@OffsetY = '0'
+		,@Observaciones	= 'Archivo por Imagen con formato JPG.'
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla Iconos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SELECT * FROM Iconos 
+-- INSERT VALUES: Iconos - FIN
+
+
+
+
+-- INSERT VALUES: ExtensionesDeArchivos - INICIO
+	DECLARE @IconoId INT, @TipoDeArchivoId INT
+
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Word')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'doc'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Word X')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'docx'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Excel')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Cálculo')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'xls'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Excel')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Cálculo')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'xlsx'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Pdf')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Documento No Editable')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'pdf'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SET @IconoId = (SELECT id FROM Iconos WHERE Nombre = 'Jpg')
+	SET @TipoDeArchivoId = (SELECT id FROM TiposDeArchivos WHERE Nombre = 'Imágen')
+	EXEC usp_ExtensionesDeArchivos__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion
+		,@Nombre = 'Jpg'
+		,@IconoId = @IconoId
+		,@TipoDeArchivoId = @TipoDeArchivoId
+		,@ProgramaAsociado = ''	
+		,@Observaciones	= ''
+		,@sResSQL = @sResSQL OUTPUT
+		,@id = @id OUTPUT
+		SELECT 'Tabla ExtensionesDeArchivos - id = ' + CAST(@id AS VARCHAR)  -- De la tabla insertada
+	
+	SELECT * FROM ExtensionesDeArchivos
+-- INSERT VALUES: ExtensionesDeArchivos - FIN
+
+
+
+
+-- ---------------------------
+-- INSERT VALUES DEL SISTEMA: - Fin de la creacion
+-- =====================================================

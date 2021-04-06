@@ -1,0 +1,106 @@
+
+-- ==============================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 01/06/2018 
+-- Description:	Elimina todos los Procedimientos Almacenados
+--              y Funciones de la base de datos			
+-- ===============================================================
+
+USE [DB_XXX]
+GO
+
+
+-- =========================================================
+-- Drop Stored Procedures y Funciones BD [DB_XXX] INICIO
+-- ---------------------------------------------------------
+
+------------------------------------
+---- Drop Stored Procedures INICIO
+------------------------------------
+
+USE [DB_XXX]
+go
+
+DECLARE @SPs NVARCHAR(MAX)  
+
+SET @SPs = ''  
+
+SELECT @SPs = @SPs + [name] + ',' FROM sys.objects  
+
+WHERE type = 'P' AND name LIKE 'usp_%'  
+
+set @SPs=SUBSTRING(@SPs, 1, LEN(@SPs) - 1)
+
+exec ('drop proc ' + @SPs )
+
+------------------------------------
+---- Drop Stored Procedures FIN
+------------------------------------
+
+
+----------------------------
+---- Drop Funciones INICIO
+----------------------------
+
+USE [DB_XXX]
+GO
+
+DECLARE @fnSQL AS NVARCHAR(MAX)
+SET @fnSQL = ''
+
+SELECT @fnSQL = @fnSQL +  'DROP FUNCTION ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name)
+FROM sys.objects
+WHERE is_ms_shipped = 0
+AND name NOT LIKE 'fn\_%' ESCAPE '\'
+AND type in (N'FN', N'IF', N'TF', N'FS', N'FT')
+exec ( @fnSQL)
+
+--------------------------
+---- Drop Funciones FIN
+--------------------------
+
+
+----------------------------------------------------------- 
+-- Drop Stored Procedures y Funciones BD [DB_XXX] FIN
+--=========================================================
+
+-- Ver de crear un archivo p/ ejecutar todos los scripts:  https://www.sqlservercentral.com/Forums/1658256/batch-file-to-run-sql-scripts
+
+--Just set the right variable values, make sure that path to SQLCMD is ok and should do the job
+
+--	@ECHO OFF
+
+--	SET SQLCMD="C:\Program Files\Microsoft SQL Server\100\Tools\Binn\SQLCMD.EXE"
+--	SET PATH="C:\path\to\sql\files\"
+--	SET SERVER="Server\Instance"
+--	SET DB="Database"
+--	SET LOGIN="sa"
+--	SET PASSWORD="pass"
+--	SET OUTPUT="C:\OutputLog.txt"
+
+--	CD %PATH%
+
+--	ECHO %date% %time% > %OUTPUT%
+
+--	for %%f in (*.sql) do (
+--	%SQLCMD% -S %SERVER% -d %DB% -U %LOGIN% -P %PASSWORD% -i %%~f >> %OUTPUT%
+--	)
+
+
+
+--OR if your scripts can be combined into one sql file and then executed we can skip the FOR loop and do something like this.
+
+--	@ECHO OFF
+
+--	SET SQLCMD="C:\Program Files\Microsoft SQL Server\100\Tools\Binn\SQLCMD.EXE"
+--	SET PATH="C:\path\to\sql\files\"
+--	SET SERVER="Server\Instance"
+--	SET DB="Database"
+--	SET LOGIN="sa"
+--	SET PASSWORD="pass"
+--	SET INPUT="C:\AllScripts.sql"
+--	SET OUTPUT="C:\OutputLog.txt"
+
+--	COPY %PATH%\*.SQL %INPUT%
+
+--	%SQLCMD% -S %SERVER% -d %DB% -U %LOGIN% -P %PASSWORD% -i %INPUT% -o %OUTPUT%

@@ -1,0 +1,2374 @@
+﻿-- =====================================================
+-- Autor: Departamento de Sistemas - #EMPRESA#
+-- Creado en la fecha: Mar  1 2019  1:37PM
+-- Nombre del Script: DB_XXX__12b_Core__Registros Generados Automaticamente.sql
+-- =====================================================
+ 
+USE DB_XXX
+GO
+ 
+-- =====================================================
+-- SP: STORE PROCEDURES // DB_XXX__12b_Core__Registros Generados Automaticamente // INICIO
+-- -------------------------
+ 
+ 
+		-- Tablas Involucradas: - INICIO
+			-- Actores
+			-- Archivos
+			-- Contactos
+			-- Contextos
+			-- CuentasDeEnvios
+			-- Dispositivos
+			-- EnviosDeCorreos
+			-- EstadosDeLogErrores
+			-- EstadosDeSoportes
+			-- EstadosDeTareas
+			-- ExtensionesDeArchivos
+			-- FuncionesDePaginas
+			-- Iconos
+			-- IconosCSS
+			-- Importaciones
+			-- ImportanciasDeTareas
+			-- LogEnviosDeCorreos
+			-- LogErrores
+			-- LogLogins
+			-- LogRegistros
+			-- Notificaciones
+			-- Paginas
+			-- ParametrosDelSistema
+			-- PrioridadesDeSoportes
+			-- RelAsig_Contactos_A_GruposDeContactos
+			-- RelAsig_Contactos_A_TiposDeContactos
+			-- RelAsig_CuentasDeEnvios_A_Tablas
+			-- RelAsig_RolesDeUsuarios_A_Paginas
+			-- RelAsig_RolesDeUsuarios_A_Usuarios
+			-- RelAsig_Subsistemas_A_Publicaciones
+			-- RelAsig_TiposDeContactos_A_Contextos
+			-- RolesDeUsuarios
+			-- Subsistemas
+			-- Tablas
+			-- TiposDeActores
+			-- TiposDeArchivos
+			-- TiposDeContactos
+			-- TiposDeLogLogins
+			-- TiposDeOperaciones
+			-- TiposDeTareas
+			-- Ubicaciones
+			-- Unidades
+			-- Usuarios
+		-- Tablas Involucradas: - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Actores /Registro/ - INICIO
+IF (OBJECT_ID('usp_Actores__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Actores__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Actores__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Actores'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ACT.id
+				,ACT.ContextoId
+				,ACT.TipoDeActorId
+				,ACT.Codigo
+				,ACT.Nombre
+				,ACT.Email
+				,ACT.Email2
+				,ACT.Telefono
+				,ACT.Telefono2
+				,ACT.Direccion
+				,ACT.Observaciones
+				,ACT.Activo
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(TDA.Nombre AS VARCHAR) AS TipoDeActor
+			FROM Actores AS ACT
+				INNER JOIN Contextos CX ON CX.id = ACT.ContextoId
+				INNER JOIN TiposDeActores TDA ON TDA.id = ACT.TipoDeActorId
+			WHERE ACT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Actores /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Archivos /Registro/ - INICIO
+IF (OBJECT_ID('usp_Archivos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Archivos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Archivos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Archivos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ARCH.id
+				,ARCH.ContextoId
+				,ARCH.TablaId
+				,ARCH.RegistroId
+				,ARCH.NombreFisicoCompleto
+				,ARCH.NombreAMostrar
+				,ARCH.ExtensionDeArchivoId
+				,ARCH.Orden
+				,ARCH.Observaciones
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(EDA.Nombre AS VARCHAR) AS ExtensionDeArchivo
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+			FROM Archivos AS ARCH
+				INNER JOIN Contextos CX ON CX.id = ARCH.ContextoId
+				INNER JOIN ExtensionesDeArchivos EDA ON EDA.id = ARCH.ExtensionDeArchivoId
+				INNER JOIN Tablas T ON T.id = ARCH.TablaId
+			WHERE ARCH.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Archivos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Contactos /Registro/ - INICIO
+IF (OBJECT_ID('usp_Contactos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Contactos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Contactos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contactos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT CTOS.id
+				,CTOS.ContextoId
+				,CTOS.EsUnaOrganizacion
+				,CTOS.NombreCompleto
+				,CTOS.Alias
+				,CTOS.Organizacion
+				,CTOS.RelacionConElContacto
+				,CTOS.Email
+				,CTOS.Email2
+				,CTOS.Telefono
+				,CTOS.Telefono2
+				,CTOS.Direccion
+				,CTOS.Url
+				,CTOS.Observaciones
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+			FROM Contactos AS CTOS
+				INNER JOIN Contextos CX ON CX.id = CTOS.ContextoId
+			WHERE CTOS.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Contactos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Contextos /Registro/ - INICIO
+IF (OBJECT_ID('usp_Contextos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Contextos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Contextos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT CX.id
+				,CX.Numero
+				,CX.Nombre
+				,CX.Codigo
+				,CX.CarpetaDeContenidos
+				,CX.Observaciones
+				,@Historia AS Historia
+			FROM Contextos AS CX
+			WHERE CX.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Contextos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: CuentasDeEnvios /Registro/ - INICIO
+IF (OBJECT_ID('usp_CuentasDeEnvios__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_CuentasDeEnvios__Registro_by_@id
+GO
+CREATE PROCEDURE usp_CuentasDeEnvios__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'CuentasDeEnvios'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT CDE.id
+				,CDE.Nombre
+				,CDE.CuentaDeEmail
+				,CDE.PwdDeEmail
+				,CDE.Smtp
+				,CDE.Puerto
+				,CDE.Observaciones
+				,@Historia AS Historia
+			FROM CuentasDeEnvios AS CDE
+			WHERE CDE.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: CuentasDeEnvios /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Dispositivos /Registro/ - INICIO
+IF (OBJECT_ID('usp_Dispositivos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Dispositivos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Dispositivos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Dispositivos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT DISP.id
+				,DISP.AsignadoAUsuarioId
+				,DISP.MachineName
+				,DISP.OSVersion
+				,DISP.UserMachineName
+				,DISP.ClavePrivada
+				,DISP.ClavePrivadaEntregada
+				,DISP.ClavePrivadaFechaEntrega
+				,DISP.Observaciones
+				,DISP.Activo
+				,@Historia AS Historia
+				,U.Apellido + ', ' + U.Nombre AS AsignadoAUsuario
+			FROM Dispositivos AS DISP
+				INNER JOIN Usuarios U ON U.id = DISP.AsignadoAUsuarioId
+			WHERE DISP.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Dispositivos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: EnviosDeCorreos /Registro/ - INICIO
+IF (OBJECT_ID('usp_EnviosDeCorreos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_EnviosDeCorreos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_EnviosDeCorreos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'EnviosDeCorreos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT EDC.id
+				,EDC.UsuarioOriginanteId
+				,EDC.UsuarioDestinatarioId
+				,EDC.TablaId
+				,EDC.RegistroId
+				,EDC.EmailDeDestino
+				,EDC.Asunto
+				,EDC.Contenido
+				,EDC.FechaPactadaDeEnvio
+				,@Historia AS Historia
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+				,U.Apellido + ', ' + U.Nombre AS UsuarioOriginante
+				,U3.Apellido + ', ' + U3.Nombre AS UsuarioDestinatario
+			FROM EnviosDeCorreos AS EDC
+				INNER JOIN Tablas T ON T.id = EDC.TablaId
+				INNER JOIN Usuarios U ON U.id = EDC.UsuarioOriginanteId
+				INNER JOIN Usuarios U3 ON U3.id = EDC.UsuarioDestinatarioId
+			WHERE EDC.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: EnviosDeCorreos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: EstadosDeLogErrores /Registro/ - INICIO
+IF (OBJECT_ID('usp_EstadosDeLogErrores__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_EstadosDeLogErrores__Registro_by_@id
+GO
+CREATE PROCEDURE usp_EstadosDeLogErrores__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'EstadosDeLogErrores'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT EDLE.id
+				,EDLE.Nombre
+				,EDLE.Nomenclatura
+				,EDLE.Orden
+				,EDLE.Observaciones
+				,@Historia AS Historia
+			FROM EstadosDeLogErrores AS EDLE
+			WHERE EDLE.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: EstadosDeLogErrores /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: EstadosDeSoportes /Registro/ - INICIO
+IF (OBJECT_ID('usp_EstadosDeSoportes__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_EstadosDeSoportes__Registro_by_@id
+GO
+CREATE PROCEDURE usp_EstadosDeSoportes__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'EstadosDeSoportes'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT EDS.id
+				,EDS.Nombre
+				,EDS.Nomenclatura
+				,EDS.Orden
+				,EDS.Observaciones
+				,EDS.CierraSoporte
+				,EDS.Activo
+				,@Historia AS Historia
+			FROM EstadosDeSoportes AS EDS
+			WHERE EDS.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: EstadosDeSoportes /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: EstadosDeTareas /Registro/ - INICIO
+IF (OBJECT_ID('usp_EstadosDeTareas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_EstadosDeTareas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_EstadosDeTareas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'EstadosDeTareas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT EDT.id
+				,EDT.Nombre
+				,EDT.Nomenclatura
+				,EDT.Orden
+				,EDT.Observaciones
+				,EDT.Activo
+				,@Historia AS Historia
+			FROM EstadosDeTareas AS EDT
+			WHERE EDT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: EstadosDeTareas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: ExtensionesDeArchivos /Registro/ - INICIO
+IF (OBJECT_ID('usp_ExtensionesDeArchivos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_ExtensionesDeArchivos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_ExtensionesDeArchivos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ExtensionesDeArchivos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT EDA.id
+				,EDA.Nombre
+				,EDA.IconoId
+				,EDA.TipoDeArchivoId
+				,EDA.ProgramaAsociado
+				,EDA.Observaciones
+				,@Historia AS Historia
+				,CAST(IC.Nombre AS VARCHAR) AS Icono
+				,CAST(TDARCH.Nombre AS VARCHAR) AS TipoDeArchivo
+			FROM ExtensionesDeArchivos AS EDA
+				INNER JOIN Iconos IC ON IC.id = EDA.IconoId
+				INNER JOIN TiposDeArchivos TDARCH ON TDARCH.id = EDA.TipoDeArchivoId
+			WHERE EDA.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: ExtensionesDeArchivos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: FuncionesDePaginas /Registro/ - INICIO
+IF (OBJECT_ID('usp_FuncionesDePaginas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_FuncionesDePaginas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_FuncionesDePaginas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'FuncionesDePaginas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT FDP.id
+				,FDP.Nombre
+				,FDP.NombreAMostrar
+				,FDP.Observaciones
+				,FDP.GeneraPagina
+				,@Historia AS Historia
+			FROM FuncionesDePaginas AS FDP
+			WHERE FDP.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: FuncionesDePaginas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Iconos /Registro/ - INICIO
+IF (OBJECT_ID('usp_Iconos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Iconos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Iconos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Iconos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT IC.id
+				,IC.Nombre
+				,IC.Imagen
+				,IC.Altura
+				,IC.Ancho
+				,IC.OffsetX
+				,IC.OffsetY
+				,IC.Observaciones
+				,IC.Activo
+				,@Historia AS Historia
+			FROM Iconos AS IC
+			WHERE IC.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Iconos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: IconosCSS /Registro/ - INICIO
+IF (OBJECT_ID('usp_IconosCSS__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_IconosCSS__Registro_by_@id
+GO
+CREATE PROCEDURE usp_IconosCSS__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'IconosCSS'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ICSS.id
+				,ICSS.Nombre
+				,ICSS.CSS
+				,ICSS.Observaciones
+				,@Historia AS Historia
+			FROM IconosCSS AS ICSS
+			WHERE ICSS.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: IconosCSS /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Importaciones /Registro/ - INICIO
+IF (OBJECT_ID('usp_Importaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Importaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Importaciones__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Importaciones'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT IMT.id
+				,IMT.ContextoId
+				,IMT.UsuarioQueImportaId
+				,IMT.TablaId
+				,IMT.Numero
+				,IMT.Fecha
+				,IMT.Observaciones
+				,IMT.ObservacionesPosteriores
+				,IMT.Activo
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+				,U.Apellido + ', ' + U.Nombre AS UsuarioQueImporta
+			FROM Importaciones AS IMT
+				INNER JOIN Contextos CX ON CX.id = IMT.ContextoId
+				INNER JOIN Tablas T ON T.id = IMT.TablaId
+				INNER JOIN Usuarios U ON U.id = IMT.UsuarioQueImportaId
+			WHERE IMT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Importaciones /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: ImportanciasDeTareas /Registro/ - INICIO
+IF (OBJECT_ID('usp_ImportanciasDeTareas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_ImportanciasDeTareas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_ImportanciasDeTareas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ImportanciasDeTareas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT IDT.id
+				,IDT.Nombre
+				,IDT.Nomenclatura
+				,IDT.Orden
+				,IDT.Observaciones
+				,@Historia AS Historia
+			FROM ImportanciasDeTareas AS IDT
+			WHERE IDT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: ImportanciasDeTareas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: LogEnviosDeCorreos /Registro/ - INICIO
+IF (OBJECT_ID('usp_LogEnviosDeCorreos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_LogEnviosDeCorreos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_LogEnviosDeCorreos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogEnviosDeCorreos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT LEDC.id
+				,LEDC.EnvioDeCorreoId
+				,LEDC.Satisfactorio
+				,LEDC.Fecha
+				,LEDC.Observaciones
+				,LEDC.ObservacionesDeRevision
+				,@Historia AS Historia
+				,CAST(EDC.Asunto AS VARCHAR) AS EnvioDeCorreo
+			FROM LogEnviosDeCorreos AS LEDC
+				INNER JOIN EnviosDeCorreos EDC ON EDC.id = LEDC.EnvioDeCorreoId
+			WHERE LEDC.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: LogEnviosDeCorreos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: LogErrores /Registro/ - INICIO
+IF (OBJECT_ID('usp_LogErrores__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_LogErrores__Registro_by_@id
+GO
+CREATE PROCEDURE usp_LogErrores__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogErrores'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT LE.id
+				,LE.UsuarioQueEjecutaId
+				,LE.FechaDeEjecucion
+				,LE.TablaId
+				,LE.TipoDeOperacionId
+				,LE.SP
+				,LE.NumeroDeError
+				,LE.LineaDeError
+				,LE.ErrorEnAmbienteSQL
+				,LE.Mensaje
+				,LE.PaginaId
+				,LE.Accion
+				,LE.Capa
+				,LE.Metodo
+				,LE.MachineName
+				,LE.EstadoDeLogErrorId
+				,LE.Observaciones
+				,@Historia AS Historia
+				,CAST(EDLE.Nombre AS VARCHAR) AS EstadoDeLogError
+				,CAST(P.Nombre AS VARCHAR) AS Pagina
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+				,CAST(TDO.Nombre AS VARCHAR) AS TipoDeOperacion
+				,U.Apellido + ', ' + U.Nombre AS UsuarioQueEjecuta
+			FROM LogErrores AS LE
+				INNER JOIN EstadosDeLogErrores EDLE ON EDLE.id = LE.EstadoDeLogErrorId
+				INNER JOIN Paginas P ON P.id = LE.PaginaId
+				INNER JOIN Tablas T ON T.id = LE.TablaId
+				INNER JOIN TiposDeOperaciones TDO ON TDO.id = LE.TipoDeOperacionId
+				INNER JOIN Usuarios U ON U.id = LE.UsuarioQueEjecutaId
+			WHERE LE.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: LogErrores /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: LogLogins /Registro/ - INICIO
+IF (OBJECT_ID('usp_LogLogins__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_LogLogins__Registro_by_@id
+GO
+CREATE PROCEDURE usp_LogLogins__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogLogins'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT LL.id
+				,LL.UsuarioId
+				,LL.FechaDeEjecucion
+				,LL.UsuarioIngresado
+				,LL.TipoDeLogLoginId
+				,LL.DispositivoId
+				,@Historia AS Historia
+				,CAST(DISP.UserMachineName AS VARCHAR) AS Dispositivo
+				,CAST(TDLL.Nombre AS VARCHAR) AS TipoDeLogLogin
+				,U.Apellido + ', ' + U.Nombre AS Usuario
+			FROM LogLogins AS LL
+				INNER JOIN Dispositivos DISP ON DISP.id = LL.DispositivoId
+				INNER JOIN TiposDeLogLogins TDLL ON TDLL.id = LL.TipoDeLogLoginId
+				INNER JOIN Usuarios U ON U.id = LL.UsuarioId
+			WHERE LL.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: LogLogins /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: LogRegistros /Registro/ - INICIO
+IF (OBJECT_ID('usp_LogRegistros__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_LogRegistros__Registro_by_@id
+GO
+CREATE PROCEDURE usp_LogRegistros__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'LogRegistros'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT LR.id
+				,LR.UsuarioQueEjecutaId
+				,LR.FechaDeEjecucion
+				,LR.TablaId
+				,LR.RegistroId
+				,LR.LoginDeDispositivoId
+				,LR.TipoDeOperacionId
+				,@Historia AS Historia
+				,CAST(U.Nombre AS VARCHAR) AS LoginDeDispositivo
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+				,CAST(TDO.Nombre AS VARCHAR) AS TipoDeOperacion
+				,U.Apellido + ', ' + U.Nombre AS UsuarioQueEjecuta
+			FROM LogRegistros AS LR
+ 
+				INNER JOIN Tablas T ON T.id = LR.TablaId
+				INNER JOIN TiposDeOperaciones TDO ON TDO.id = LR.TipoDeOperacionId
+				INNER JOIN Usuarios U ON U.id = LR.UsuarioQueEjecutaId
+			WHERE LR.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: LogRegistros /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Notificaciones /Registro/ - INICIO
+IF (OBJECT_ID('usp_Notificaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Notificaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Notificaciones__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Notificaciones'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT NOTIF.id
+				,NOTIF.ContextoId
+				,NOTIF.Fecha
+				,NOTIF.Numero
+				,NOTIF.UsuarioDestinatarioId
+				,NOTIF.TablaId
+				,NOTIF.RegistroId
+				,NOTIF.IconoCSSId
+				,NOTIF.Cuerpo
+				,NOTIF.Leida
+				,NOTIF.Activo
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(ICSS.Nombre AS VARCHAR) AS IconoCSS
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+				,U.Apellido + ', ' + U.Nombre AS UsuarioDestinatario
+			FROM Notificaciones AS NOTIF
+				INNER JOIN Contextos CX ON CX.id = NOTIF.ContextoId
+				INNER JOIN IconosCSS ICSS ON ICSS.id = NOTIF.IconoCSSId
+				INNER JOIN Tablas T ON T.id = NOTIF.TablaId
+				INNER JOIN Usuarios U ON U.id = NOTIF.UsuarioDestinatarioId
+			WHERE NOTIF.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Notificaciones /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Paginas /Registro/ - INICIO
+IF (OBJECT_ID('usp_Paginas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Paginas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Paginas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Paginas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT P.id
+				,P.TablaId
+				,P.FuncionDePaginaId
+				,P.Nombre
+				,P.Titulo
+				,P.Tips
+				,P.Observaciones
+				,P.SeMuestraEnAsignacionDePermisos
+				,@Historia AS Historia
+				,CAST(FDP.Nombre AS VARCHAR) AS FuncionDePagina
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+			FROM Paginas AS P
+				INNER JOIN FuncionesDePaginas FDP ON FDP.id = P.FuncionDePaginaId
+				INNER JOIN Tablas T ON T.id = P.TablaId
+			WHERE P.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Paginas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: ParametrosDelSistema /Registro/ - INICIO
+IF (OBJECT_ID('usp_ParametrosDelSistema__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_ParametrosDelSistema__Registro_by_@id
+GO
+CREATE PROCEDURE usp_ParametrosDelSistema__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'ParametrosDelSistema'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT PDS.id
+				,PDS.ContextoId
+				,PDS.Contextohabilitadi
+				,PDS.IntentosFallidosDeLoginPermitidos
+				,PDS.IntervaloDeIntentosFallidoLogin
+				,PDS.MinDeBloqueoTrasIntentosFallidoLogin
+				,PDS.PermitidasLasModificaciones
+				,PDS.PermitidasLasConsultas
+				,PDS.PermitidasLasExportaciones
+				,PDS.PermitidosLosEnviosDeCorreo
+				,PDS.DiferenciaHorariaDelServidor
+				,PDS.Observaciones
+				,@Historia AS Historia
+			FROM ParametrosDelSistema AS PDS
+			WHERE PDS.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: ParametrosDelSistema /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: PrioridadesDeSoportes /Registro/ - INICIO
+IF (OBJECT_ID('usp_PrioridadesDeSoportes__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_PrioridadesDeSoportes__Registro_by_@id
+GO
+CREATE PROCEDURE usp_PrioridadesDeSoportes__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'PrioridadesDeSoportes'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT PDSop.id
+				,PDSop.Nombre
+				,PDSop.Orden
+				,PDSop.Observaciones
+				,PDSop.Activo
+				,@Historia AS Historia
+			FROM PrioridadesDeSoportes AS PDSop
+			WHERE PDSop.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: PrioridadesDeSoportes /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_Contactos_A_GruposDeContactos /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_Contactos_A_GruposDeContactos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_Contactos_A_GruposDeContactos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_Contactos_A_GruposDeContactos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_Contactos_A_GruposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ACAG.id
+				,ACAG.ContactoId
+				,ACAG.GrupoDeContactoId
+				,@Historia AS Historia
+				,CAST(CTOS.NombreCompleto AS VARCHAR) AS Contacto
+				,CAST(CTOS.NombreCompleto AS VARCHAR) AS GrupoDeContacto
+			FROM RelAsig_Contactos_A_GruposDeContactos AS ACAG
+				INNER JOIN Contactos CTOS ON CTOS.id = ACAG.ContactoId
+ 
+			WHERE ACAG.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_Contactos_A_GruposDeContactos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_Contactos_A_TiposDeContactos /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_Contactos_A_TiposDeContactos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_Contactos_A_TiposDeContactos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_Contactos_A_TiposDeContactos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_Contactos_A_TiposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ACAT.id
+				,ACAT.ContactoId
+				,ACAT.TipoDeContactoId
+				,@Historia AS Historia
+				,CAST(CTOS.NombreCompleto AS VARCHAR) AS Contacto
+				,CAST(TDC.Nombre AS VARCHAR) AS TipoDeContacto
+			FROM RelAsig_Contactos_A_TiposDeContactos AS ACAT
+				INNER JOIN Contactos CTOS ON CTOS.id = ACAT.ContactoId
+				INNER JOIN TiposDeContactos TDC ON TDC.id = ACAT.TipoDeContactoId
+			WHERE ACAT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_Contactos_A_TiposDeContactos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_CuentasDeEnvios_A_Tablas /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_CuentasDeEnvios_A_Tablas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_CuentasDeEnvios_A_Tablas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_CuentasDeEnvios_A_Tablas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_CuentasDeEnvios_A_Tablas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT RCAT.id
+				,RCAT.ContextoId
+				,RCAT.CuentaDeEnvioId
+				,RCAT.TablaId
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(CDE.Nombre AS VARCHAR) AS CuentaDeEnvio
+				,CAST(T.Nombre AS VARCHAR) AS Tabla
+			FROM RelAsig_CuentasDeEnvios_A_Tablas AS RCAT
+				INNER JOIN Contextos CX ON CX.id = RCAT.ContextoId
+				INNER JOIN CuentasDeEnvios CDE ON CDE.id = RCAT.CuentaDeEnvioId
+				INNER JOIN Tablas T ON T.id = RCAT.TablaId
+			WHERE RCAT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_CuentasDeEnvios_A_Tablas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Paginas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Paginas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Paginas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT RDUAP.id
+				,RDUAP.RolDeUsuarioId
+				,RDUAP.PaginaId
+				,RDUAP.AutorizadoA_CargarLaPagina
+				,RDUAP.AutorizadoA_OperarLaPagina
+				,RDUAP.AutorizadoA_VerRegAnulados
+				,RDUAP.AutorizadoA_AccionesEspeciales
+				,@Historia AS Historia
+				,CAST(P.Nombre AS VARCHAR) AS Pagina
+				,CAST(RDU.Nombre AS VARCHAR) AS RolDeUsuario
+			FROM RelAsig_RolesDeUsuarios_A_Paginas AS RDUAP
+				INNER JOIN Paginas P ON P.id = RDUAP.PaginaId
+				INNER JOIN RolesDeUsuarios RDU ON RDU.id = RDUAP.RolDeUsuarioId
+			WHERE RDUAP.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Paginas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Usuarios /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_RolesDeUsuarios_A_Usuarios__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_RolesDeUsuarios_A_Usuarios__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_RolesDeUsuarios_A_Usuarios'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT RDUAU.id
+				,RDUAU.RolDeUsuarioId
+				,RDUAU.UsuarioId
+				,RDUAU.FechaDesde
+				,RDUAU.FechaHasta
+				,@Historia AS Historia
+				,CAST(RDU.Nombre AS VARCHAR) AS RolDeUsuario
+				,U.Apellido + ', ' + U.Nombre AS Usuario
+			FROM RelAsig_RolesDeUsuarios_A_Usuarios AS RDUAU
+				INNER JOIN RolesDeUsuarios RDU ON RDU.id = RDUAU.RolDeUsuarioId
+				INNER JOIN Usuarios U ON U.id = RDUAU.UsuarioId
+			WHERE RDUAU.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_RolesDeUsuarios_A_Usuarios /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_Subsistemas_A_Publicaciones /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_Subsistemas_A_Publicaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_Subsistemas_A_Publicaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_Subsistemas_A_Publicaciones__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_Subsistemas_A_Publicaciones'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ASAP.id
+				,ASAP.SubsistemaId
+				,ASAP.PublicacionId
+				,ASAP.UsuarioId
+				,ASAP.NumeroDeVersion
+				,ASAP.SVN
+				,ASAP.Ubicacion
+				,ASAP.Observaciones
+				,@Historia AS Historia
+				,CAST(PUB.Fecha AS VARCHAR) AS Publicacion
+				,CAST(SUBS.Nombre AS VARCHAR) AS Subsistema
+				,U.Apellido + ', ' + U.Nombre AS Usuario
+			FROM RelAsig_Subsistemas_A_Publicaciones AS ASAP
+				INNER JOIN Publicaciones PUB ON PUB.id = ASAP.PublicacionId
+				INNER JOIN Subsistemas SUBS ON SUBS.id = ASAP.SubsistemaId
+				INNER JOIN Usuarios U ON U.id = ASAP.UsuarioId
+			WHERE ASAP.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_Subsistemas_A_Publicaciones /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RelAsig_TiposDeContactos_A_Contextos /Registro/ - INICIO
+IF (OBJECT_ID('usp_RelAsig_TiposDeContactos_A_Contextos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RelAsig_TiposDeContactos_A_Contextos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RelAsig_TiposDeContactos_A_Contextos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT ATCAC.id
+				,ATCAC.TipoDeContactoId
+				,ATCAC.ContextoId
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+				,CAST(TDC.Nombre AS VARCHAR) AS TipoDeContacto
+			FROM RelAsig_TiposDeContactos_A_Contextos AS ATCAC
+				INNER JOIN Contextos CX ON CX.id = ATCAC.ContextoId
+				INNER JOIN TiposDeContactos TDC ON TDC.id = ATCAC.TipoDeContactoId
+			WHERE ATCAC.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RelAsig_TiposDeContactos_A_Contextos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: RolesDeUsuarios /Registro/ - INICIO
+IF (OBJECT_ID('usp_RolesDeUsuarios__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_RolesDeUsuarios__Registro_by_@id
+GO
+CREATE PROCEDURE usp_RolesDeUsuarios__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'RolesDeUsuarios'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT RDU.id
+				,RDU.Nombre
+				,RDU.Observaciones
+				,RDU.Prioridad
+				,RDU.SeMuestraEnAsignacionDePermisos
+				,RDU.Activo
+				,@Historia AS Historia
+			FROM RolesDeUsuarios AS RDU
+			WHERE RDU.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: RolesDeUsuarios /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Subsistemas /Registro/ - INICIO
+IF (OBJECT_ID('usp_Subsistemas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Subsistemas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Subsistemas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Subsistemas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT SUBS.id
+				,SUBS.Nombre
+				,SUBS.Observaciones
+				,SUBS.Activo
+				,@Historia AS Historia
+			FROM Subsistemas AS SUBS
+			WHERE SUBS.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Subsistemas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Tablas /Registro/ - INICIO
+IF (OBJECT_ID('usp_Tablas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Tablas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Tablas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Tablas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT T.id
+				,T.IconoCSSId
+				,T.Nombre
+				,T.NombreAMostrar
+				,T.Nomenclatura
+				,T.Observaciones
+				,T.LlevaActivo
+				,T.PermiteEliminar
+				,T.TablaDeCore
+				,T.SeCreanPaginas
+				,T.TieneArchivos
+				,T.CampoAMostrarEnFK
+				,T.CampoQuePuedeSerIdString
+				,T.CamposAExcluirEnElInsert
+				,T.CamposAExcluirEnElUpdate
+				,T.PermiteInsertAnonimamente
+				,T.PermiteListarDDLAnonimamente
+				,T.SeGeneranAutoSusSPsDeABM
+				,T.SeGeneranAutoSusSPsDeRegistros
+				,T.SeGeneranAutoSusSPsDeListados
+				,@Historia AS Historia
+				,CAST(ICSS.Nombre AS VARCHAR) AS IconoCSS
+			FROM Tablas AS T
+				INNER JOIN IconosCSS ICSS ON ICSS.id = T.IconoCSSId
+			WHERE T.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Tablas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeActores /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeActores__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeActores__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeActores__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeActores'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDA.id
+				,TDA.Nombre
+				,TDA.Observaciones
+				,@Historia AS Historia
+			FROM TiposDeActores AS TDA
+			WHERE TDA.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeActores /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeArchivos /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeArchivos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeArchivos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeArchivos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeArchivos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDARCH.id
+				,TDARCH.Nombre
+				,TDARCH.Observaciones
+				,@Historia AS Historia
+			FROM TiposDeArchivos AS TDARCH
+			WHERE TDARCH.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeArchivos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeContactos /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeContactos__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeContactos__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeContactos__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeContactos'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDC.id
+				,TDC.Nombre
+				,TDC.Observaciones
+				,@Historia AS Historia
+			FROM TiposDeContactos AS TDC
+			WHERE TDC.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeContactos /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeLogLogins /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeLogLogins__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeLogLogins__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeLogLogins__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeLogLogins'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDLL.id
+				,TDLL.ConCookie
+				,TDLL.Nombre
+				,TDLL.MensajeDeError
+				,TDLL.Observaciones
+				,@Historia AS Historia
+			FROM TiposDeLogLogins AS TDLL
+			WHERE TDLL.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeLogLogins /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeOperaciones /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeOperaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeOperaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeOperaciones__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeOperaciones'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDO.id
+				,TDO.Nombre
+				,TDO.Texto
+				,TDO.Observaciones
+				,@Historia AS Historia
+			FROM TiposDeOperaciones AS TDO
+			WHERE TDO.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeOperaciones /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: TiposDeTareas /Registro/ - INICIO
+IF (OBJECT_ID('usp_TiposDeTareas__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_TiposDeTareas__Registro_by_@id
+GO
+CREATE PROCEDURE usp_TiposDeTareas__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'TiposDeTareas'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT TDT.id
+				,TDT.ContextoId
+				,TDT.Nombre
+				,TDT.Observaciones
+				,TDT.Activo
+				,@Historia AS Historia
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+			FROM TiposDeTareas AS TDT
+				INNER JOIN Contextos CX ON CX.id = TDT.ContextoId
+			WHERE TDT.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: TiposDeTareas /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Ubicaciones /Registro/ - INICIO
+IF (OBJECT_ID('usp_Ubicaciones__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Ubicaciones__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Ubicaciones__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Ubicaciones'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT UB.id
+				,UB.Nombre
+				,UB.Observaciones
+				,UB.UbicacionAbsoluta
+				,@Historia AS Historia
+			FROM Ubicaciones AS UB
+			WHERE UB.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Ubicaciones /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Unidades /Registro/ - INICIO
+IF (OBJECT_ID('usp_Unidades__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Unidades__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Unidades__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Unidades'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT UD.id
+				,UD.Codigo
+				,UD.Nombre
+				,UD.Observaciones
+				,@Historia AS Historia
+			FROM Unidades AS UD
+			WHERE UD.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Unidades /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- SP-TABLA: Usuarios /Registro/ - INICIO
+IF (OBJECT_ID('usp_Usuarios__Registro_by_@id') IS NOT NULL) DROP PROCEDURE usp_Usuarios__Registro_by_@id
+GO
+CREATE PROCEDURE usp_Usuarios__Registro_by_@id
+	 @UsuarioQueEjecutaId                           INT
+	,@FechaDeEjecucion                              DATETIME
+	,@id                                            INT
+	,@sResSQL                                       VARCHAR(1000)	OUTPUT
+AS
+BEGIN TRY
+	DECLARE @Tabla VARCHAR(80) = 'Usuarios'
+		,@FuncionDePagina VARCHAR(30) = 'Registro'
+		,@AutorizadoA VARCHAR(30) = 'CargarLaPagina'
+		,@SP VARCHAR(80) = OBJECT_NAME(@@PROCID)
+ 
+	-- Validación 1:[Mismo Contexto]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) pertenece al mismo Contexto del Registro Seleccionado (@Tabla/@id).
+	EXEC usp_VAL_UsuarioPerteneceAlContextoDelRegistro  @UsuarioId = @UsuarioQueEjecutaId, @Tabla = @Tabla, @RegistroId = @id, @sResSQL = @sResSQL OUTPUT
+	IF @sResSQL = ''
+		BEGIN	  -- Validación 2:[Permisos sobre el registro]: Se valida que el Usuario que ejecuta (@UsuarioQueEjecutaId) tiene permiso (Rol de Usaurio con permiso) para consultar (CargarLaPagina o ver anulados en tal caso) registros de esta tabla (@Tabla).
+			EXEC usp_VAL_AutorizadoA_ConReg  @UsuarioId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla, @FuncionDePagina = @FuncionDePagina, @AutorizadoA = @AutorizadoA, @sResSQL = @sResSQL OUTPUT, @RegistroId = @id
+		END
+ 
+	IF @sResSQL = ''
+		BEGIN
+			DECLARE @Historia	VARCHAR(1000)
+			EXEC usp_LogRegistros__Listado_HistoriaDeUnRegistro  @RegistroId = @id, @Tabla = @Tabla, @Historia = @Historia OUTPUT
+ 
+			SELECT U.id
+				,U.ActorId
+				,U.ContextoId
+				,U.UserName
+				,U.Pass
+				,U.Nombre
+				,U.Apellido
+				,U.Email
+				,U.Email2
+				,U.Telefono
+				,U.Telefono2
+				,U.Direccion
+				,U.Observaciones
+				,U.Activo
+				,U.UltimoLoginSesionId
+				,U.UltimoLoginFecha
+				,U.EsUsuarioAdminAnonimo
+				,U.AuthCookie
+				,U.FechaDeExpiracionCookie
+				,@Historia AS Historia
+				,CAST(ACT.Nombre AS VARCHAR) AS Actor
+				,CAST(CX.Nombre AS VARCHAR) AS Contexto
+			FROM Usuarios AS U
+				INNER JOIN Actores ACT ON ACT.id = U.ActorId
+				INNER JOIN Contextos CX ON CX.id = U.ContextoId
+			WHERE U.id = @id
+		END
+	END TRY
+	BEGIN CATCH
+		DECLARE @NumeroDeError INT = ERROR_NUMBER(), @LineaDeError INT = ERROR_LINE(), @Mensaje VARCHAR(1000) = ERROR_MESSAGE()
+		EXEC usp_LogErroresSP__Insert  @UsuarioQueEjecutaId = @UsuarioQueEjecutaId, @FechaDeEjecucion = @FechaDeEjecucion, @Tabla = @Tabla
+			,@FuncionDePagina = @FuncionDePagina, @SP = @SP, @LineaDeError = @LineaDeError, @Mensaje = @Mensaje
+			,@NumeroDeError = @NumeroDeError, @sResSQL = @sResSQL OUTPUT
+	END CATCH
+GO
+-- SP-TABLA: Usuarios /Registro/ - FIN
+ 
+ 
+ 
+ 
+-- -------------------------
+-- SP: STORE PROCEDURES - REGISTROS - Fin
+-- =====================================================

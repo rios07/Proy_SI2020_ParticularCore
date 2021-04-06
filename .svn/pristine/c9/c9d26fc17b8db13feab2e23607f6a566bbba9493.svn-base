@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html>
+@using FuncionesCore;
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <title>Intranet</title>
+    <meta content="IATASA" name="description" />
+    <meta content="IATASA" name="author" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    @*<link rel="shortcut icon" href="~/template/images/favicon.ico">
+    <link href="~/template/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="~/template/css/icons.css" rel="stylesheet" type="text/css">
+    <link href="~/template/css/style.css" rel="stylesheet" type="text/css">
+    <link href="~/template/css/main.css" rel="stylesheet" type="text/css">
+    <link href="~/template/plugins/bootstrap-datepicker/css/bootstrap-datepicker.min.css" rel="stylesheet" />
+    <link href="~/template/plugins/sweet-alert2/sweetalert2.css" rel="stylesheet" />
+    <link href="~/template/css/custom.css" rel="stylesheet" />
+    <link href="~/template/plugins/bootstrap-datepicker/css/bootstrap-datepicker.min.css" rel="stylesheet" />
+    <link href="~/Content/css/select2.css" rel="stylesheet" />
+    <link href="~/Scripts/jquery-ui-1.12.1.custom/jquery-ui.min.css" rel="stylesheet" />
+    <!-- END wrapper -->
+    <!-- jQuery  -->
+
+    <script src="~/template/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script>
+    <script src="~/template/plugins/tinymce/tinymce.min.js"></script>
+    <script src="~/template/js/jquery.min.js"></script>
+    <script src="~/template/js/tether.min.js"></script>
+    <script src="~/template/js/bootstrap.min.js"></script>
+    <script src="~/template/js/modernizr.min.js"></script>
+    <script src="~/template/js/detect.js"></script>
+    <script src="~/template/js/fastclick.js"></script>
+    <script src="~/template/js/jquery.slimscroll.js"></script>
+    <script src="~/template/js/jquery.blockUI.js"></script>
+    <script src="~/template/js/waves.js"></script>
+    <script src="~/template/js/jquery.nicescroll.js"></script>
+    <script src="~/template/js/jquery.scrollTo.min.js"></script>
+    <script src="~/Scripts/jquery.validate.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.js"></script>
+    <script src="~/template/plugins/notify/jquery.gritter.js"></script>
+    <script src="~/Scripts/select2.js"></script>
+    <script src="~/template/plugins/sweet-alert2/sweetalert2.js"></script>
+    <script src="~/template/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script>
+    <script src="~/Scripts/jquery-ui-1.12.1.custom/jquery-ui.js"></script>*@
+    @Styles.Render("~/bundles/css")
+            @Styles.Render("~/bundles/templatecss")
+
+
+            @Scripts.Render("~/bundles/jquery")
+            @Scripts.Render("~/bundles/modernizr")
+            @Scripts.Render("~/bundles/templatejs")
+            @Scripts.Render("~/bundles/bootstrap")
+            @Scripts.Render("~/bundles/jqueryval")
+        <script>
+            $.validator.methods.number = function (value, element) {
+                return this.optional(element) || /^-?(?:\d+|\d{1,3}(?:\.\d{3})+)?(?:,\d+)?$/.test(value);
+            }
+        </script>
+    
+
+    @*<script src="~/template/js/custom.js"></script>*@
+</head>
+
+
+
+<body class="fixed-left">
+
+    <!-- Loader -->
+    <div id="preloader"><div id="status"><div class="spinner"></div></div></div>
+
+    <!-- Begin page -->
+    <div id="wrapper">
+        @if (Request.IsAuthenticated)
+        {
+            Html.RenderPartial("_MenuBarraIzquierda");
+        }
+
+
+        <!-- Start right Content here -->
+
+        <div class="content-page">
+            <!-- Start content -->
+            <div class="content">
+
+                <!-- Top Bar Start -->
+                <div class="topbar col-12 removeOnIframe">
+                    @if (Request.IsAuthenticated)
+                    {
+                        
+                        <nav class="navbar-custom col-12 row">
+                            @if(ViewBag.DatosDeUnaPagina!= null)
+                            {
+                                <h2 class="col-10 " style="font-weight: 500" >@ViewBag.DatosDeUnaPagina.Titulo</h2>
+                            }
+                            else
+                            {
+                                <h2 class="col-10 " style="font-weight: 500" >Titulo faltante informe a sistemas</h2>
+                            }
+
+                            <ul class="list-inline float-right pull-right col-2 mb-0">
+                                <li class="list-inline-item dropdown notification-list">
+                                    <a class="nav-link dropdown-toggle arrow-none waves-effect" data-toggle="dropdown" href="#" role="button"
+                                       aria-haspopup="false" aria-expanded="false">
+                                        <i class="ion-ios7-bell noti-icon"></i>
+                                        <span class="badge badge-success noti-icon-badge">0</span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right dropdown-arrow dropdown-menu-lg" style="height: 200px; overflow-y: auto;" id="notificaciones">
+                                        <!-- item-->
+                                        <div class="dropdown-item noti-title">
+                                            <h5>Notificaciones</h5>
+                                        </div>
+
+
+
+                                        @*<!-- item-->
+            <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <div class="notify-icon bg-primary"><i class="mdi mdi-cart-outline"></i></div>
+                <p class="notify-details"><b>Your order is placed</b><small class="text-muted">Dummy text of the printing and typesetting industry.</small></p>
+            </a>
+
+            <!-- item-->
+            <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <div class="notify-icon bg-primary"><i class="mdi mdi-message"></i></div>
+                <p class="notify-details"><b>New Message received</b><small class="text-muted">You have 87 unread messages</small></p>
+            </a>
+
+            <!-- item-->
+            <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <div class="notify-icon bg-primary"><i class="mdi mdi-martini"></i></div>
+                <p class="notify-details"><b>Your item is shipped</b><small class="text-muted">It is a long established fact that a reader will</small></p>
+            </a>*@
+
+                                        <!-- All-->
+                                        @*<a href="javascript:void(0);" class="dropdown-item notify-item">
+                Mostrar todas
+            </a>*@
+
+                                    </div>
+                                </li>
+
+                                <li class="list-inline-item dropdown notification-list">
+                                    <a class="nav-link dropdown-toggle arrow-none waves-effect nav-user" data-toggle="dropdown" href="#" role="button"
+                                       aria-haspopup="false" aria-expanded="false">
+                                        <img style='width: 40px; height: 40px; display: block; margin: auto;' src='/template/images/config-icon.png'>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right profile-dropdown ">
+                                        <a class="dropdown-item" href="~/PrivadaDelUsuario/Usuarios/CambiarPassword"><i class="mdi mdi-account-key text-muted"></i> Cambiar Contr.</a>
+                                        <a class="dropdown-item" href="~/intranet/Home/Logout"><i class="mdi mdi-logout m-r-5 text-muted"></i> Logout</a>
+                                    </div>
+                                </li>
+
+                            </ul>
+
+                            <ul class="list-inline menu-left mb-0">
+                                <li class="list-inline-item">
+                                    <button type="button" class="button-menu-mobile open-left waves-effect">
+                                        <i class="ion-navicon"></i>
+                                    </button>
+                                </li>
+                                <li class="hide-phone list-inline-item app-search">
+                                    @*<h3 class="page-title">@ViewBag.Title</h3>*@
+                                </li>
+                            </ul>
+
+                            <div class="clearfix"></div>
+
+                        </nav>
+                    }
+                </div>
+                <!-- Top Bar End -->
+
+                <div class="page-content-wrapper ">
+
+                    <script>
+                        var submitcorrecto = false;
+                    </script>
+                    <div class="container">
+                        @{bool submitcorrecto = false;}
+                        @if (Request.IsAuthenticated)
+                        {
+
+                            if (ViewBag.Msg != null)
+                            {
+                                foreach (Mensaje m in ViewBag.Msg)
+                                {
+                                    //if (m.EsError)
+                                    //{
+                                    string alertClase = "";
+                                    string tituloMensaje = "";
+                                    if (m.EsError)
+                                    {
+                                        alertClase = "alert alert-danger";
+                                        tituloMensaje = "¡Ooops!";
+                                    }
+                                    else
+                                    {
+                                        alertClase = "alert alert-success";
+                                        tituloMensaje = "¡Enhorabuena!";
+                                        submitcorrecto = true;
+                                    }
+                                    <div class="@alertClase">
+                                        <button type="button" class="close" data-dismiss="alert">x</button>
+                                        <strong>@tituloMensaje </strong>
+                                        @Html.Raw(m.Contenido)
+                                    </div>
+
+                                    //}
+                                }
+                            }
+
+                        }
+                        @RenderBody()
+
+                    </div><!-- container -->
+                    
+
+                </div> <!-- Page content Wrapper -->
+
+            </div> <!-- content -->
+
+            <footer class="footer removeOnIframe">
+                © 2020 IATASA.
+            </footer>
+
+        </div>
+        <!-- End Right content here -->
+
+    </div>
+
+
+    <!-- App js -->
+    <script src="~/template/js/app.js"></script>
+    @*@{Html.RenderPartial("_Notificaciones");}*@
+
+    <template id="TemplateNovedad">
+        <a href="javascript:void(0);" class="dropdown-item notify-item">
+            @*Prepend aca*@
+            <span class="notify-icon bg-primary"><i onclick="NotifVista($(this));" id="icono" class="fa fa-life-ring color-gray-light"></i></span>
+            <p class="notify-details">
+                <span><a id="LinkReg" href="">Ir a.</a></span>
+                <span id="fecha" class="timeline-date text-right"></span>
+            </p>
+        </a>
+    </template>
+
+    @RenderSection("scripts", required: false)
+
+    <script>
+        function EnviarNotificacion(Titulo, Cuerpo, Icono) {
+            Ruta = "~/Intranet/__Contenidos/Contextos/images/iconos/";
+            if (icono == null) {
+                Ruta = null;
+            }
+            else {
+                Ruta = Ruta + Icono;
+
+            }
+            if (window.Notification) {
+
+                Notification.requestPermission(function (status) {
+                    var n = new Notification(Titulo, { body: Cuerpo, icon: Ruta, vibration: 10000 });
+                });
+            }
+        }
+
+        function AgregarABotonera(string) {
+            $(".botonera").append(string)
+        }
+    </script>
+
+    @{Html.RenderPartial("Scripts/_ScriptsCustom");}
+    @{string Operacion = ViewBag.Operacion;}
+
+    @switch (Operacion)
+    {
+        case "insert":
+            Html.RenderPartial("Scripts/_ScriptsInsert");
+            break;
+
+        case "delete":
+            Html.RenderPartial("Scripts/_ScriptsDelete");
+            break;
+
+        case "listado":
+            Html.RenderPartial("Scripts/_ScriptsListado");
+            break;
+
+        case "registro":
+            Html.RenderPartial("Scripts/_ScriptsRegistro");
+            break;
+
+        case "update":
+            Html.RenderPartial("Scripts/_ScriptsUpdate");
+            break;
+
+        case "otro":
+            Html.RenderPartial("Scripts/_ScriptsOtro");
+            break;
+
+        case "custom":
+            Html.RenderPartial("Scripts/_ScriptsCustom");
+            break;
+
+        default:
+            break;
+    }
+
+</body>
+</html>
+
+
+@* PASAR A SCRIPS CUANDO ESTEN LOS BUNDLES*@
+<script>
+    var presubmit = @submitcorrecto.ToString().ToLower();
+    if (presubmit == true) {
+        if (IsIframe()) {
+            submitcorrecto = true;
+        }
+        else {
+            submitcorrecto = false;
+        }
+    }
+    $(function () {
+        IsIframe();
+        if (typeof manejarMensaje === "function") {
+            window.onmessage = function (e) {
+                if (e.data == 'submit') {
+                    manejarMensaje();
+                };
+            };
+
+        }
+    });
+    if (submitcorrecto) {
+        window.top.postMessage('submit', '*');
+    };
+    function IsIframe() {
+        if (window.location !== window.parent.location) {
+            $('.removeOnIframe').remove();
+            $('.content-page').css('margin-left', '0');
+            //window.onsubmit = function (e) {
+            //    window.top.postMessage('submit', '*')
+            //}
+            if (!typeof manejarMensaje === "function") {
+                alert("DECLARAR manejarMensaje");
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+</script>

@@ -1,0 +1,50 @@
+-- =====================================================
+-- Author:		Dpto de Sistemas - #EMPRESA#
+-- CREATE date: 19/04/2013 
+-- Description:	Creando USUARIOS Y PERMISOS SOBRE LA BD - DB_XXX
+-- =====================================================
+
+USE DB_XXX
+GO
+
+-- =====================================================
+-- P: Creando USUARIOS Y PERMISOS SOBRE LA BD - Inicio
+-- -------------------------
+
+--IF (OBJECT_ID('User_Login_DB_XXX') IS NOT NULL)
+--	BEGIN
+		EXEC sp_addlogin 'User_Login_DB_XXX', 'M4hU6k4S71aoU35V', 'DB_XXX'
+--	END
+--GO
+
+EXEC sp_grantdbaccess 'User_Login_DB_XXX'
+GO
+
+
+EXEC sp_addrolemember 'db_datawriter', 'User_Login_DB_XXX'
+GO
+
+
+EXEC sp_addrolemember 'db_datareader', 'User_Login_DB_XXX'
+GO
+
+EXEC sp_addrolemember 'db_owner', 'User_Login_DB_XXX'
+GO
+
+
+-- Para realizar BAckups
+EXEC sp_addrolemember 'db_backupoperator', 'User_Login_DB_XXX'
+GO
+
+EXEC sp_addrolemember 'db_accessadmin', 'User_Login_DB_XXX'
+GO
+
+-- El Siguiente da error, pero es el rol necesario para hacer RESTORE
+--EXEC sp_addrolemember 'dbcreator', 'User_Login_DB_XXX'
+--GO
+
+
+
+-- =====================================================
+-- P: Creando USUARIOS Y PERMISOS SOBRE LA BD - FIN
+-- -------------------------

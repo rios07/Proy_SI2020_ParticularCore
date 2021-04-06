@@ -1,0 +1,46 @@
+﻿@using ControladoresCore.Extensiones
+@using (Html.BeginPanel("Archivos", "name=\"divArchivo\" style=\"visibility:hidden\""))
+{
+    <input id="files" name="file" type="file" multiple="true" value=""> <br>
+    <div id="ArchivosDeRegistro" class="form-horizontal">
+
+    </div>
+
+
+    <script type="text/javascript">
+        function Test() {
+            var datos = {
+                pTabla: "informes",
+                pRegistroId: $("#Id").val()
+
+            }
+
+            $('#target').html('sending..');
+
+            $.ajax({
+                url: '/informes/CargarArchivos',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (data) {
+                    //$('#ArchivosDeRegistro').append("<table border=\"1\">");
+                    //for (var i = 0; i < data.count(); i++) {
+                    //    $('#ArchivosDeRegistro').append("")
+                    //    $('#ArchivosDeRegistro').append("<tr><td rowspan="2">"+ data[i].+"</td>")
+                    //}
+                    //$('#ArchivosDeRegistro').append("</table>");
+                    ////<table border="1">
+                    ////    <tr>
+                    ////        <td rowspan="2">Icono</td>
+                    ////        <td>Fila de arriba</td>
+                    ////    </tr>
+                    ////    <tr>
+
+                    ////        <td>Fila de ajoba</td>
+                    ////    </tr>
+                    ////</table>
+                },
+                data: JSON.stringify(datos)
+            });
+        }
+    </script>
